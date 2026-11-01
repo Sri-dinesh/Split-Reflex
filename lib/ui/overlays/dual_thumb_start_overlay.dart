@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../../core/constants/app_icon_data.dart';
 import '../../core/constants/palette.dart';
 import '../../core/services/haptic_choreographer.dart';
 import '../../core/services/procedural_audio_synth.dart';
@@ -231,15 +233,43 @@ class DualThumbStartOverlay extends StatelessWidget {
   }
 
   Widget _buildHeroIdentity(bool isCompact) {
+    final double iconSize = isCompact ? 64.0 : 78.0;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Custom Bespoke Kinetic Identity Mark
-        SizedBox(
-          width: isCompact ? 52.0 : 64.0,
-          height: isCompact ? 52.0 : 64.0,
-          child: CustomPaint(
-            painter: _HeroGlyphPainter(),
+        // Official Split Reflex App Icon
+        Container(
+          width: iconSize,
+          height: iconSize,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(iconSize * 0.22),
+            boxShadow: [
+              BoxShadow(
+                color: SplitPalette.nearMissCyan.withOpacity(0.35),
+                blurRadius: 20.0,
+                spreadRadius: 1.0,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.6),
+                blurRadius: 12.0,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 1.2,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(iconSize * 0.21),
+            child: Image.memory(
+              base64Decode(kAppIconPngBase64),
+              width: iconSize,
+              height: iconSize,
+              fit: BoxFit.cover,
+            ),
           ),
         ),
         SizedBox(height: isCompact ? 10.0 : 14.0),
@@ -750,47 +780,4 @@ class _SensorArcPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _SensorArcPainter oldDelegate) =>
       oldDelegate.isHeld != isHeld || oldDelegate.progress != progress;
-}
-
-class _HeroGlyphPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 4.0;
-
-    // Left Hemisphere Arc (Cyan)
-    final leftPaint = Paint()
-      ..color = SplitPalette.nearMissCyan
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round;
-
-    final rect = Rect.fromCircle(center: center, radius: radius);
-    canvas.drawArc(rect, math.pi * 0.65, math.pi * 0.7, false, leftPaint);
-
-    // Right Hemisphere Arc (Crimson)
-    final rightPaint = Paint()
-      ..color = SplitPalette.hazardCrimson
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawArc(rect, -math.pi * 0.35, math.pi * 0.7, false, rightPaint);
-
-    // Center Singularity Dot
-    final dotPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 3.0, dotPaint);
-
-    // Outer subtle guide ring
-    final guidePaint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    canvas.drawCircle(center, radius, guidePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _HeroGlyphPainter oldDelegate) => false;
 }
