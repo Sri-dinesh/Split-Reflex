@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.splitbrain" "\0"
-            VALUE "FileDescription", "idk" "\0"
+            VALUE "CompanyName", "com.splitreflex" "\0"
+            VALUE "FileDescription", "Split Reflex" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "idk" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.splitbrain. All rights reserved." "\0"
-            VALUE "OriginalFilename", "idk.exe" "\0"
-            VALUE "ProductName", "idk" "\0"
+            VALUE "InternalName", "split_reflex" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Split Reflex. All rights reserved." "\0"
+            VALUE "OriginalFilename", "split_reflex.exe" "\0"
+            VALUE "ProductName", "Split Reflex" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
