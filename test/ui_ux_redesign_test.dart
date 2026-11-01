@@ -8,6 +8,7 @@ import 'package:split_brain/engine/game_controller.dart';
 import 'package:split_brain/ui/overlays/app_settings_sheet.dart';
 import 'package:split_brain/ui/overlays/dual_thumb_start_overlay.dart';
 import 'package:split_brain/ui/overlays/leaderboard_sheet.dart';
+import 'package:split_brain/ui/widgets/split_diamond_emblem.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -126,6 +127,7 @@ void main() {
 
       expect(find.text('SPLIT REFLEX'), findsOneWidget);
       expect(find.text('Dual-Hemisphere Reflex Engine'), findsOneWidget);
+      expect(find.byType(Image), findsOneWidget, reason: 'Must display original app icon above app name');
       expect(find.text('Classic'), findsOneWidget);
       expect(find.text('Phase Flux'), findsOneWidget);
       expect(find.text('Pulse Reflex'), findsOneWidget);
@@ -142,6 +144,26 @@ void main() {
       // Tap Start Run
       await tester.tap(find.text('Start Run'));
       expect(controller.state, GamePlayState.countdown);
+    });
+
+    testWidgets('SplitDiamondEmblem renders with custom animated convergence and bloom', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SplitDiamondEmblem(
+                size: 96.0,
+                dockProgress: 0.5,
+                glowIntensity: 0.8,
+                seamIntensity: 0.7,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(SplitDiamondEmblem), findsOneWidget);
+      expect(find.byType(CustomPaint), findsWidgets);
     });
   });
 }

@@ -63,6 +63,12 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
 
     // Ticker master game loop
     _ticker = createTicker((elapsed) {
+      // Defer game simulation during splash sequence to ensure 100% fluid 60/120fps UI animation
+      if (_showSplash) {
+        _lastElapsed = elapsed;
+        return;
+      }
+
       if (_lastElapsed == Duration.zero) {
         _lastElapsed = elapsed;
         return;
@@ -293,6 +299,7 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
                     if (mounted) {
                       setState(() {
                         _showSplash = false;
+                        _lastElapsed = Duration.zero;
                       });
                     }
                   },

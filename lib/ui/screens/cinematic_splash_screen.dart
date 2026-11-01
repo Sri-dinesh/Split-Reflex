@@ -1,11 +1,18 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/constants/palette.dart';
 import '../../core/services/haptic_choreographer.dart';
 import '../../core/services/procedural_audio_synth.dart';
 import '../widgets/split_diamond_emblem.dart';
 
+/// Cinematic procedural animated splash screen.
+///
+/// Features:
+/// - Smooth dual-hemisphere vector wing convergence along the diagonal split rift
+/// - Singularity ignition seam with bilateral cyan/crimson radial bloom
+/// - Subtle harmonic kinetic breathe and staggered typography reveals
+/// - Synchronized procedural synth resonance and tactile haptic feedback
+/// - Instant tap-to-skip support
 class CinematicSplashScreen extends StatefulWidget {
   final VoidCallback onComplete;
 
@@ -18,106 +25,104 @@ class CinematicSplashScreen extends StatefulWidget {
 class _CinematicSplashScreenState extends State<CinematicSplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _rotationAnimation;
-  late Animation<double> _glowAnimation;
+  late Animation<double> _dockAnimation;
+  late Animation<double> _seamIgnitionAnimation;
+  late Animation<double> _energyBloomAnimation;
+  late Animation<double> _kineticBreatheAnimation;
   late Animation<double> _titleOpacityAnimation;
+  late Animation<double> _titleSlideAnimation;
   late Animation<double> _taglineOpacityAnimation;
   late Animation<double> _exitFadeAnimation;
 
-  Timer? _midTimer;
-  Timer? _endTimer;
+  Timer? _lockHapticTimer;
+  Timer? _completionTimer;
 
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 2400),
     );
 
-    // Initial spring-pop entry
-    _scaleAnimation = TweenSequence<double>([
+    // 1. Dual-Hemisphere Convergence (Glide smoothly into lock)
+    _dockAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.0, 0.48, curve: Curves.easeOutQuart),
+    );
+
+    // 2. Singularity Seam Laser Ignition
+    _seamIgnitionAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.42, 0.65, curve: Curves.easeInOutCubic),
+    );
+
+    // 3. Radial Bilateral Energy Bloom
+    _energyBloomAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.38, 0.72, curve: Curves.easeOutCubic),
+    );
+
+    // 4. Subtle Harmonic Kinetic Breathe (Scale 1.0 -> 1.035 -> 1.0)
+    _kineticBreatheAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.2, end: 1.15).chain(CurveTween(curve: Curves.easeOutBack)),
+        tween: Tween<double>(begin: 0.94, end: 1.035).chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 55,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.035, end: 1.0).chain(CurveTween(curve: Curves.easeInOutSine)),
         weight: 45,
       ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.15, end: 1.0).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 25,
+    ]).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.0, 0.88),
       ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.0),
-        weight: 30,
-      ),
-    ]).animate(_animController);
+    );
 
-    // Gentle kinetic calibration rotation
-    _rotationAnimation = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: -math.pi * 0.25, end: 0.0).chain(CurveTween(curve: Curves.easeOutCubic)),
-        weight: 50,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 0.0),
-        weight: 50,
-      ),
-    ]).animate(_animController);
-
-    // Breathing glow bloom
-    _glowAnimation = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeInQuad)),
-        weight: 35,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 0.7).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 35,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.7, end: 1.0).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 30,
-      ),
-    ]).animate(_animController);
-
-    // Title reveal (fade & slide up)
+    // 5. Staggered Title Reveal
     _titleOpacityAnimation = CurvedAnimation(
       parent: _animController,
-      curve: const Interval(0.40, 0.75, curve: Curves.easeOut),
+      curve: const Interval(0.48, 0.78, curve: Curves.easeOutCubic),
+    );
+    _titleSlideAnimation = Tween<double>(begin: 12.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.48, 0.78, curve: Curves.easeOutCubic),
+      ),
     );
 
-    // Tagline reveal
+    // 6. Tagline Reveal
     _taglineOpacityAnimation = CurvedAnimation(
       parent: _animController,
-      curve: const Interval(0.60, 0.85, curve: Curves.easeOut),
+      curve: const Interval(0.64, 0.88, curve: Curves.easeOutCubic),
     );
 
-    // Smooth exit transition
+    // 7. Smooth Horizon Exit Crossfade
     _exitFadeAnimation = CurvedAnimation(
       parent: _animController,
-      curve: const Interval(0.88, 1.0, curve: Curves.easeInOut),
+      curve: const Interval(0.88, 1.0, curve: Curves.easeInOutCubic),
     );
 
-    // Trigger haptic and sound sync
-    _runSplashSequence();
+    _startCinematicSequence();
   }
 
   void _cancelTimers() {
-    _midTimer?.cancel();
-    _midTimer = null;
-    _endTimer?.cancel();
-    _endTimer = null;
+    _lockHapticTimer?.cancel();
+    _lockHapticTimer = null;
+    _completionTimer?.cancel();
+    _completionTimer = null;
   }
 
-  void _runSplashSequence() {
-    // Subtle start tick
+  void _startCinematicSequence() {
+    // Initial start tick
     ProceduralAudioSynth.instance.playTap();
     HapticChoreographer.instance.triggerTap();
 
     _animController.forward();
 
-    // Singularity burst haptic at midpoint
-    _midTimer = Timer(const Duration(milliseconds: 750), () {
+    // Singularity lock audio & haptics at 45% of sequence (~1080ms)
+    _lockHapticTimer = Timer(const Duration(milliseconds: 1080), () {
       if (mounted) {
         ProceduralAudioSynth.instance.playSwapTick(isFinal: false);
         HapticChoreographer.instance.triggerNearMiss();
@@ -125,7 +130,7 @@ class _CinematicSplashScreenState extends State<CinematicSplashScreen>
     });
 
     // Sequence completion
-    _endTimer = Timer(const Duration(milliseconds: 2200), () {
+    _completionTimer = Timer(const Duration(milliseconds: 2400), () {
       if (mounted) {
         widget.onComplete();
       }
@@ -144,7 +149,7 @@ class _CinematicSplashScreenState extends State<CinematicSplashScreen>
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        // Allow tap to skip splash immediately
+        // Immediate skip on player tap
         _cancelTimers();
         widget.onComplete();
       },
@@ -156,63 +161,68 @@ class _CinematicSplashScreenState extends State<CinematicSplashScreen>
           return Opacity(
             opacity: exitOpacity,
             child: Container(
-              color: Colors.black,
+              color: const Color(0xFF07070A),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Animated Kinetic Emblem
                     Transform.scale(
-                      scale: _scaleAnimation.value,
-                      child: Transform.rotate(
-                        angle: _rotationAnimation.value,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Ambient Radial Energy Rings
-                            Container(
-                              width: 140.0 * _glowAnimation.value,
-                              height: 140.0 * _glowAnimation.value,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: RadialGradient(
-                                  colors: [
-                                    SplitPalette.nearMissCyan.withOpacity(0.25 * _glowAnimation.value),
-                                    SplitPalette.hazardCrimson.withOpacity(0.15 * _glowAnimation.value),
-                                    Colors.transparent,
-                                  ],
-                                  stops: const [0.0, 0.5, 1.0],
-                                ),
+                      scale: _kineticBreatheAnimation.value,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Expanding Ambient Radial Aura behind emblem
+                          Container(
+                            width: 160.0 * (0.6 + 0.4 * _energyBloomAnimation.value),
+                            height: 160.0 * (0.6 + 0.4 * _energyBloomAnimation.value),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  SplitPalette.nearMissCyan.withOpacity(0.28 * _energyBloomAnimation.value),
+                                  SplitPalette.hazardCrimson.withOpacity(0.18 * _energyBloomAnimation.value),
+                                  Colors.transparent,
+                                ],
+                                stops: const [0.0, 0.48, 1.0],
                               ),
                             ),
+                          ),
 
-                            // Authentic Split Diamond
-                            const SplitDiamondEmblem(size: 96.0),
-                          ],
-                        ),
+                          // Detailed Procedural Split Emblem with Animated Convergence
+                          SplitDiamondEmblem(
+                            size: 104.0,
+                            dockProgress: _dockAnimation.value,
+                            glowIntensity: _energyBloomAnimation.value,
+                            seamIntensity: _seamIgnitionAnimation.value,
+                          ),
+                        ],
                       ),
                     ),
 
-                    const SizedBox(height: 32.0),
+                    const SizedBox(height: 36.0),
 
-                    // Title with Opacity and Letter Spacing
-                    Opacity(
-                      opacity: _titleOpacityAnimation.value,
-                      child: const Text(
-                        'SPLIT REFLEX',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28.0,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 5.0,
+                    // Staggered Title with Fluid Slide & Fade
+                    Transform.translate(
+                      offset: Offset(0, _titleSlideAnimation.value),
+                      child: Opacity(
+                        opacity: _titleOpacityAnimation.value,
+                        child: const Text(
+                          'SPLIT REFLEX',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 28.0,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 5.2,
+                          ),
                         ),
                       ),
                     ),
 
                     const SizedBox(height: 8.0),
 
-                    // Tagline
+                    // Subtitle / Tagline
                     Opacity(
                       opacity: _taglineOpacityAnimation.value,
                       child: const Text(
@@ -222,7 +232,7 @@ class _CinematicSplashScreenState extends State<CinematicSplashScreen>
                           color: Colors.white54,
                           fontSize: 12.0,
                           fontWeight: FontWeight.w600,
-                          letterSpacing: 1.2,
+                          letterSpacing: 1.4,
                         ),
                       ),
                     ),

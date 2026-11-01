@@ -1,11 +1,11 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../../core/constants/app_icon_data.dart';
 import '../../core/constants/palette.dart';
 import '../../core/services/haptic_choreographer.dart';
 import '../../core/services/procedural_audio_synth.dart';
 import '../../engine/game_controller.dart';
-import '../widgets/split_diamond_emblem.dart';
 
 class DualThumbStartOverlay extends StatelessWidget {
   final GameController controller;
@@ -237,8 +237,48 @@ class DualThumbStartOverlay extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Custom Illustrated Split Reflex Emblem (Cyan / Crimson Split Diamond)
-        SplitDiamondEmblem(size: iconSize),
+        // Official Split Reflex App Icon with High-Contrast Cyber Framing
+        Container(
+          width: iconSize,
+          height: iconSize,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(iconSize * 0.22),
+            boxShadow: [
+              BoxShadow(
+                color: SplitPalette.nearMissCyan.withOpacity(0.35),
+                blurRadius: 18.0,
+                spreadRadius: 1.0,
+                offset: const Offset(-4, 2),
+              ),
+              BoxShadow(
+                color: SplitPalette.hazardCrimson.withOpacity(0.35),
+                blurRadius: 18.0,
+                spreadRadius: 1.0,
+                offset: const Offset(4, 2),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.8),
+                blurRadius: 12.0,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.white.withOpacity(0.25),
+              width: 1.5,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(iconSize * 0.21),
+            child: Image.memory(
+              kAppIconBytes,
+              width: iconSize,
+              height: iconSize,
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
+        ),
         SizedBox(height: isCompact ? 10.0 : 14.0),
 
         // Title
