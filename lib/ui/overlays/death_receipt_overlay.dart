@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../core/constants/palette.dart';
 import '../../core/services/haptic_choreographer.dart';
 import '../../core/services/procedural_audio_synth.dart';
 import '../../engine/game_controller.dart';
@@ -17,6 +16,7 @@ class DeathReceiptOverlay extends StatefulWidget {
   final VoidCallback onRetry;
   final VoidCallback? onReturnToMenu;
   final VoidCallback onOpenLeaderboard;
+  final VoidCallback? onOpenSettings;
 
   const DeathReceiptOverlay({
     super.key,
@@ -25,6 +25,7 @@ class DeathReceiptOverlay extends StatefulWidget {
     required this.onRetry,
     this.onReturnToMenu,
     required this.onOpenLeaderboard,
+    this.onOpenSettings,
   });
 
   @override
@@ -49,7 +50,7 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
 
       final Uint8List pngBytes = byteData.buffer.asUint8List();
       final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/split_brain_autopsy_${DateTime.now().millisecondsSinceEpoch}.png');
+      final file = File('${tempDir.path}/split_reflex_autopsy_${DateTime.now().millisecondsSinceEpoch}.png');
       await file.writeAsBytes(pngBytes);
 
       await Share.shareXFiles(
@@ -71,17 +72,6 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
     return '$minStr:$secStr';
   }
 
-  String _getPairLabel(GamePairMode mode) {
-    switch (mode) {
-      case GamePairMode.classic:
-        return 'CLASSIC (THRUST / DART)';
-      case GamePairMode.phaseFlux:
-        return 'PHASE FLUX (POLARITY / DRIFT)';
-      case GamePairMode.pulseReflex:
-        return 'PULSE REFLEX (SHIELD / WARP)';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final autopsy = widget.autopsy;
@@ -89,7 +79,8 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
 
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -102,7 +93,7 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                   width: math.min(360.0, MediaQuery.of(context).size.width - 48.0),
                   padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
                   decoration: const BoxDecoration(
-                    color: Color(0xFFF8F8F8),
+                    color: Color(0xFFF9F9F9),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -112,11 +103,10 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                         'SPLIT REFLEX',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Color(0xFF121212),
-                          fontSize: 20,
+                          color: Color(0xFF111111),
+                          fontSize: 22,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 4.0,
-                          fontFamily: 'monospace',
                         ),
                       ),
                       const SizedBox(height: 2.0),
@@ -124,18 +114,17 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                         'COGNITIVE AUTOPSY REPORT',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Color(0xFF666666),
+                          color: Color(0xFF777777),
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.5,
-                          fontFamily: 'monospace',
                         ),
                       ),
-                      const SizedBox(height: 12.0),
+                      const SizedBox(height: 14.0),
                       _buildReceiptDashedLine(),
                       const SizedBox(height: 14.0),
 
-                      // Primary Metrics
+                      // Primary Metrics (Final Score & Survival Time)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -146,18 +135,19 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                                 'FINAL SCORE',
                                 style: TextStyle(
                                   color: Color(0xFF888888),
-                                  fontSize: 9,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w700,
-                                  fontFamily: 'monospace',
+                                  letterSpacing: 0.5,
                                 ),
                               ),
+                              const SizedBox(height: 2.0),
                               Text(
                                 '${autopsy.finalScore}',
                                 style: const TextStyle(
-                                  color: Color(0xFF121212),
-                                  fontSize: 28,
+                                  color: Color(0xFF111111),
+                                  fontSize: 32,
                                   fontWeight: FontWeight.w900,
-                                  fontFamily: 'monospace',
+                                  letterSpacing: -0.5,
                                 ),
                               ),
                             ],
@@ -169,18 +159,18 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                                 'SURVIVAL TIME',
                                 style: TextStyle(
                                   color: Color(0xFF888888),
-                                  fontSize: 9,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w700,
-                                  fontFamily: 'monospace',
+                                  letterSpacing: 0.5,
                                 ),
                               ),
+                              const SizedBox(height: 2.0),
                               Text(
                                 _formatTimer(autopsy.survivalTime),
                                 style: const TextStyle(
-                                  color: Color(0xFF121212),
+                                  color: Color(0xFF111111),
                                   fontSize: 24,
                                   fontWeight: FontWeight.w900,
-                                  fontFamily: 'monospace',
                                 ),
                               ),
                             ],
@@ -192,91 +182,72 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                       _buildReceiptDashedLine(),
                       const SizedBox(height: 12.0),
 
-                      // Failure Autopsy Details
+                      // Cause of Collapse
                       const Text(
-                        'CAUSE OF COLLAPSE:',
+                        'CAUSE OF COLLAPSE',
                         style: TextStyle(
                           color: Color(0xFF888888),
-                          fontSize: 9,
+                          fontSize: 9.5,
                           fontWeight: FontWeight.w800,
-                          letterSpacing: 1.0,
-                          fontFamily: 'monospace',
+                          letterSpacing: 0.8,
                         ),
                       ),
                       const SizedBox(height: 4.0),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF121212),
-                          borderRadius: BorderRadius.circular(2.0),
+                          color: const Color(0xFF111111),
+                          borderRadius: BorderRadius.circular(4.0),
                         ),
                         child: Text(
-                          '${autopsy.failedHemisphere} HEMISPHERE // ${autopsy.failedMechanic}\n(+${autopsy.timePostLastMutation.toStringAsFixed(1)}s POST-MUTATION)',
+                          '${autopsy.failedHemisphere} Hemisphere // ${autopsy.failedMechanic}\n(+${autopsy.timePostLastMutation.toStringAsFixed(1)}s post-mutation)',
                           style: const TextStyle(
-                            color: Color(0xFFF8F8F8),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            fontFamily: 'monospace',
-                            height: 1.3,
+                            color: Color(0xFFFAFAFA),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            height: 1.35,
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 14.0),
+                      const SizedBox(height: 12.0),
 
                       // Session & Play Mode Indicators
                       Row(
                         children: [
                           Expanded(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
-                              margin: const EdgeInsets.only(bottom: 8.0, right: 4.0),
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 5.0),
                               decoration: BoxDecoration(
-                                color: autopsy.sessionMode == GameSessionMode.duoCoop
-                                    ? const Color(0xFFFFF8E1)
-                                    : const Color(0xFFF5F5F5),
-                                borderRadius: BorderRadius.circular(2.0),
+                                color: const Color(0xFFEEEEEE),
+                                borderRadius: BorderRadius.circular(4.0),
                               ),
                               child: Text(
-                                autopsy.sessionMode == GameSessionMode.duoCoop
-                                    ? 'DUO CO-OP'
-                                    : 'SOLO RUN',
+                                autopsy.sessionMode == GameSessionMode.duoCoop ? 'Duo Co-Op' : 'Solo Run',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: autopsy.sessionMode == GameSessionMode.duoCoop
-                                      ? const Color(0xFFB78103)
-                                      : const Color(0xFF424242),
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.8,
-                                  fontFamily: 'monospace',
+                                style: const TextStyle(
+                                  color: Color(0xFF333333),
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
                           ),
+                          const SizedBox(width: 8.0),
                           Expanded(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
-                              margin: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 5.0),
                               decoration: BoxDecoration(
-                                color: autopsy.playMode == PlayHandMode.oneHand
-                                    ? const Color(0xFFE0F7FA)
-                                    : const Color(0xFFFFEBEE),
-                                borderRadius: BorderRadius.circular(2.0),
+                                color: const Color(0xFFEEEEEE),
+                                borderRadius: BorderRadius.circular(4.0),
                               ),
                               child: Text(
-                                autopsy.playMode == PlayHandMode.oneHand
-                                    ? '1-HAND SURVIVAL'
-                                    : '2-HANDS STRICT',
+                                autopsy.playMode == PlayHandMode.oneHand ? '1-Hand Survival' : '2-Hands Strict',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: autopsy.playMode == PlayHandMode.oneHand
-                                      ? const Color(0xFF00695C)
-                                      : const Color(0xFFC62828),
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.8,
-                                  fontFamily: 'monospace',
+                                style: const TextStyle(
+                                  color: Color(0xFF333333),
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
@@ -284,15 +255,15 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                         ],
                       ),
 
-                      // Duo Co-Op Blame / Attribution Stamp
+                      // Duo Blame Attribution
                       if (autopsy.sessionMode == GameSessionMode.duoCoop) ...[
+                        const SizedBox(height: 8.0),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 5.0),
-                          margin: const EdgeInsets.only(bottom: 8.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFD32F2F).withOpacity(0.12),
+                            color: const Color(0xFFFFEBEE),
                             border: Border.all(color: const Color(0xFFD32F2F), width: 1.0),
-                            borderRadius: BorderRadius.circular(2.0),
+                            borderRadius: BorderRadius.circular(4.0),
                           ),
                           child: Row(
                             children: [
@@ -300,12 +271,11 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                               const SizedBox(width: 6.0),
                               Expanded(
                                 child: Text(
-                                  'COLLAPSE CAUSED BY: ${autopsy.responsibleParty}',
+                                  'Fault attribution: ${autopsy.responsibleParty}',
                                   style: const TextStyle(
                                     color: Color(0xFFD32F2F),
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w900,
-                                    fontFamily: 'monospace',
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ),
@@ -314,13 +284,15 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                         ),
                       ],
 
+                      const SizedBox(height: 10.0),
+
                       // Hardware Telemetry Stamp
                       Container(
                         padding: const EdgeInsets.all(8.0),
                         decoration: BoxDecoration(
                           border: Border.all(
                             color: isGod ? const Color(0xFFD4AF37) : (autopsy.wasOverdrive ? const Color(0xFFFF1E42) : Colors.black26),
-                            width: 1.5,
+                            width: 1.2,
                           ),
                           borderRadius: BorderRadius.circular(4.0),
                         ),
@@ -329,51 +301,47 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                           children: [
                             Text(
                               isGod
-                                  ? '★ 1% GOD MODE VERIFIED (10.0x) ★'
-                                  : (autopsy.wasOverdrive ? '⚡ OVERDRIVE VERIFIED (3.0x)' : 'STANDARD PROTOCOL (1.0x)'),
+                                  ? '★ 1% God Mode Verified (10.0x)'
+                                  : (autopsy.wasOverdrive ? '⚡ Overdrive Verified (3.0x)' : 'Standard Protocol (1.0x)'),
                               style: TextStyle(
                                 color: isGod
                                     ? const Color(0xFFB8860B)
-                                    : (autopsy.wasOverdrive ? const Color(0xFFFF1E42) : const Color(0xFF121212)),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.0,
-                                fontFamily: 'monospace',
+                                    : (autopsy.wasOverdrive ? const Color(0xFFFF1E42) : const Color(0xFF222222)),
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                             const SizedBox(height: 2.0),
                             Text(
-                              'BATTERY AT CRASH: ${autopsy.batteryPct}% [${autopsy.wasOverdrive ? "UNPLUGGED" : "SECURE"}]',
+                              'Battery at crash: ${autopsy.batteryPct}% [${autopsy.wasOverdrive ? "Unplugged" : "Standard"}]',
                               style: const TextStyle(
-                                color: Color(0xFF444444),
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
-                                fontFamily: 'monospace',
+                                color: Color(0xFF555555),
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
                       ),
 
-                      const SizedBox(height: 14.0),
+                      const SizedBox(height: 12.0),
 
-                      // Thumb Activity Density Sparkline
+                      // Thumb Density Sparkline
                       const Text(
-                        'THUMB DENSITY SPARKLINE (L vs R):',
+                        'THUMB DENSITY (LEFT VS RIGHT)',
                         style: TextStyle(
                           color: Color(0xFF888888),
-                          fontSize: 9,
+                          fontSize: 9.0,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.5,
-                          fontFamily: 'monospace',
                         ),
                       ),
                       const SizedBox(height: 6.0),
                       Container(
-                        height: 48,
+                        height: 44,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFECECEC),
-                          borderRadius: BorderRadius.circular(3.0),
+                          color: const Color(0xFFEEEEEE),
+                          borderRadius: BorderRadius.circular(4.0),
                         ),
                         child: CustomPaint(
                           painter: SparklinePainter(
@@ -383,25 +351,24 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                         ),
                       ),
 
-                      const SizedBox(height: 14.0),
+                      const SizedBox(height: 12.0),
                       _buildReceiptDashedLine(),
                       const SizedBox(height: 10.0),
 
                       // Barcode simulation
                       CustomPaint(
-                        size: const Size(double.infinity, 24),
+                        size: const Size(double.infinity, 22),
                         painter: BarcodePainter(),
                       ),
                       const SizedBox(height: 6.0),
                       Center(
                         child: Text(
-                          'SESSION: #${autopsy.finalScore.toString().padLeft(6, "0")}',
+                          'SESSION #${autopsy.finalScore.toString().padLeft(6, "0")}',
                           style: const TextStyle(
                             color: Color(0xFF888888),
-                            fontSize: 8,
+                            fontSize: 8.5,
                             fontWeight: FontWeight.w600,
-                            letterSpacing: 2.0,
-                            fontFamily: 'monospace',
+                            letterSpacing: 1.5,
                           ),
                         ),
                       ),
@@ -411,233 +378,113 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
               ),
             ),
 
-            // Quick Config Panel (Allows changing settings directly on Game Over screen)
-            if (widget.controller != null) ...[
-              const SizedBox(height: 16.0),
-              Container(
-                width: math.min(360.0, MediaQuery.of(context).size.width - 48.0),
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF141419).withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(12.0),
-                  border: Border.all(color: Colors.white24, width: 1.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
-                      blurRadius: 10.0,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'NEXT RUN CONFIG',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 9.0,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        if (widget.onReturnToMenu != null)
-                          GestureDetector(
-                            onTap: widget.onReturnToMenu,
-                            child: const Text(
-                              'ALL SETTINGS >',
-                              style: TextStyle(
-                                color: SplitPalette.nearMissCyan,
-                                fontSize: 9.0,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.0,
-                                fontFamily: 'monospace',
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8.0),
-                    // Game Pair Mode Cycler Chip
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          widget.controller!.cycleGamePairMode();
-                        });
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
-                        margin: const EdgeInsets.only(bottom: 6.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(6.0),
-                          border: Border.all(
-                            color: widget.controller!.gamePairMode == GamePairMode.classic
-                                ? SplitPalette.nearMissCyan
-                                : (widget.controller!.gamePairMode == GamePairMode.phaseFlux
-                                    ? const Color(0xFF00E5FF)
-                                    : const Color(0xFFFFD700)),
-                            width: 1.2,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.swap_horiz_rounded,
-                              size: 13,
-                              color: widget.controller!.gamePairMode == GamePairMode.classic
-                                  ? SplitPalette.nearMissCyan
-                                  : (widget.controller!.gamePairMode == GamePairMode.phaseFlux
-                                      ? const Color(0xFF00E5FF)
-                                      : const Color(0xFFFFD700)),
-                            ),
-                            const SizedBox(width: 6.0),
-                            Text(
-                              'MODE: ${_getPairLabel(widget.controller!.gamePairMode)}',
-                              style: TextStyle(
-                                color: widget.controller!.gamePairMode == GamePairMode.classic
-                                    ? SplitPalette.nearMissCyan
-                                    : (widget.controller!.gamePairMode == GamePairMode.phaseFlux
-                                        ? const Color(0xFF00E5FF)
-                                        : const Color(0xFFFFD700)),
-                                fontSize: 9.0,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.8,
-                                fontFamily: 'monospace',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickConfigChip(
-                            label: widget.controller!.sessionMode == GameSessionMode.duoCoop ? 'DUO (2P)' : 'SOLO (1P)',
-                            isActive: widget.controller!.sessionMode == GameSessionMode.duoCoop,
-                            activeColor: Colors.amberAccent,
-                            onTap: () {
-                              setState(() {
-                                widget.controller!.toggleSessionMode();
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 6.0),
-                        Expanded(
-                          child: _QuickConfigChip(
-                            label: widget.controller!.playMode == PlayHandMode.twoHands ? '2-HANDS' : '1-HAND',
-                            isActive: widget.controller!.playMode == PlayHandMode.twoHands,
-                            activeColor: SplitPalette.hazardCrimson,
-                            onTap: () {
-                              setState(() {
-                                widget.controller!.togglePlayMode();
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 6.0),
-                        Expanded(
-                          child: _QuickConfigChip(
-                            label: widget.controller!.controlMode == ControlMode.gyroTilt ? 'GYRO' : 'TOUCH',
-                            isActive: widget.controller!.controlMode == ControlMode.gyroTilt,
-                            activeColor: Colors.purpleAccent,
-                            onTap: () {
-                              setState(() {
-                                widget.controller!.toggleControlMode();
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 6.0),
-                        Expanded(
-                          child: _QuickConfigChip(
-                            label: widget.controller!.theme.name.toUpperCase(),
-                            isActive: true,
-                            activeColor: SplitPalette.nearMissCyan,
-                            onTap: () {
-                              setState(() {
-                                widget.controller!.cycleTheme();
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 20.0),
 
             // Action Buttons
-            Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
-              alignment: WrapAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    ProceduralAudioSynth.instance.playSwapTick(isFinal: false);
-                    HapticChoreographer.instance.triggerTap();
-                    widget.onRetry();
-                  },
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text(
-                    'RETRY RUN',
-                    style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5, fontFamily: 'monospace'),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 13.0),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-                  ),
-                ),
-                if (widget.onReturnToMenu != null)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Play Again Button (Primary CTA)
                   ElevatedButton.icon(
                     onPressed: () {
-                      ProceduralAudioSynth.instance.playTap();
+                      ProceduralAudioSynth.instance.playSwapTick(isFinal: false);
                       HapticChoreographer.instance.triggerTap();
-                      widget.onReturnToMenu!();
+                      widget.onRetry();
                     },
-                    icon: const Icon(Icons.tune_rounded, size: 18),
+                    icon: const Icon(Icons.refresh_rounded, size: 20),
                     label: const Text(
-                      'SETTINGS',
-                      style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5, fontFamily: 'monospace'),
+                      'Play Again',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.5),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF22222A),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 13.0),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        side: const BorderSide(color: Colors.white24),
-                      ),
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14.0),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.0)),
+                      elevation: 4.0,
                     ),
                   ),
-                ElevatedButton.icon(
-                  onPressed: _shareReceipt,
-                  icon: const Icon(Icons.share, size: 18),
-                  label: Text(
-                    _isSharing ? 'EXPORTING...' : 'SHARE',
-                    style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5, fontFamily: 'monospace'),
+
+                  const SizedBox(height: 10.0),
+
+                  // Secondary Action Buttons Row
+                  Row(
+                    children: [
+                      // Share Button
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _shareReceipt,
+                          icon: const Icon(Icons.share_rounded, size: 16),
+                          label: Text(
+                            _isSharing ? 'Exporting...' : 'Share',
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white24, width: 1.0),
+                            backgroundColor: Colors.white.withOpacity(0.04),
+                            padding: const EdgeInsets.symmetric(vertical: 12.0),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8.0),
+
+                      // Settings / Preferences Button
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            ProceduralAudioSynth.instance.playTap();
+                            HapticChoreographer.instance.triggerTap();
+                            if (widget.onOpenSettings != null) {
+                              widget.onOpenSettings!();
+                            } else if (widget.onReturnToMenu != null) {
+                              widget.onReturnToMenu!();
+                            }
+                          },
+                          icon: const Icon(Icons.tune_rounded, size: 16),
+                          label: const Text(
+                            'Settings',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white24, width: 1.0),
+                            backgroundColor: Colors.white.withOpacity(0.04),
+                            padding: const EdgeInsets.symmetric(vertical: 12.0),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 8.0),
+
+                      // Return to Menu Button
+                      if (widget.onReturnToMenu != null)
+                        InkWell(
+                          onTap: () {
+                            ProceduralAudioSynth.instance.playTap();
+                            HapticChoreographer.instance.triggerTap();
+                            widget.onReturnToMenu!();
+                          },
+                          borderRadius: BorderRadius.circular(12.0),
+                          child: Container(
+                            width: 44.0,
+                            height: 44.0,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.06),
+                              borderRadius: BorderRadius.circular(12.0),
+                              border: Border.all(color: Colors.white24, width: 1.0),
+                            ),
+                            child: const Icon(Icons.home_rounded, color: Colors.white70, size: 20),
+                          ),
+                        ),
+                    ],
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: SplitPalette.hazardCrimson,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 13.0),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -655,7 +502,7 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: List.generate(
             count,
-            (_) => Container(width: dashWidth, height: 1.0, color: const Color(0xFFCCCCCC)),
+            (_) => Container(width: dashWidth, height: 1.0, color: const Color(0xFFD0D0D0)),
           ),
         );
       },
@@ -726,7 +573,7 @@ class SparklinePainter extends CustomPainter {
 
     // Left activity line (black)
     final Paint leftPaint = Paint()
-      ..color = const Color(0xFF121212)
+      ..color = const Color(0xFF111111)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
@@ -742,7 +589,7 @@ class SparklinePainter extends CustomPainter {
     }
     canvas.drawPath(leftPath, leftPaint);
 
-    // Right activity line (red)
+    // Right activity line (crimson)
     final Paint rightPaint = Paint()
       ..color = const Color(0xFFFF1E42)
       ..style = PaintingStyle.stroke
@@ -770,7 +617,7 @@ class BarcodePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final Paint barPaint = Paint()
-      ..color = const Color(0xFF121212)
+      ..color = const Color(0xFF111111)
       ..style = PaintingStyle.fill;
 
     const List<int> pattern = [2, 1, 3, 1, 1, 4, 2, 1, 3, 2, 1, 2, 3, 1, 4, 1, 2, 3, 1, 1, 2, 4, 2, 1, 3];
@@ -784,52 +631,4 @@ class BarcodePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant BarcodePainter oldDelegate) => false;
-}
-
-class _QuickConfigChip extends StatelessWidget {
-  final String label;
-  final bool isActive;
-  final Color activeColor;
-  final VoidCallback onTap;
-
-  const _QuickConfigChip({
-    required this.label,
-    required this.isActive,
-    required this.activeColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 28,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: isActive ? activeColor.withOpacity(0.18) : Colors.black45,
-          borderRadius: BorderRadius.circular(6.0),
-          border: Border.all(
-            color: isActive ? activeColor : Colors.white12,
-            width: 1.0,
-          ),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isActive ? Colors.white : Colors.white38,
-                fontSize: 9.0,
-                fontWeight: FontWeight.w900,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

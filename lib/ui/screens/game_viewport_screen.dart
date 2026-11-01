@@ -10,6 +10,7 @@ import '../../core/services/leaderboard_service.dart';
 import '../../core/services/procedural_audio_synth.dart';
 import '../../engine/game_controller.dart';
 import '../../engine/painters/master_game_painter.dart';
+import '../overlays/app_settings_sheet.dart';
 import '../overlays/countdown_overlay.dart';
 import '../overlays/death_receipt_overlay.dart';
 import '../overlays/dual_thumb_start_overlay.dart';
@@ -91,6 +92,15 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const LeaderboardSheet(),
+    );
+  }
+
+  void _openSettings() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AppSettingsSheet(controller: _controller),
     );
   }
 
@@ -239,12 +249,17 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
                           onOpenLeaderboard: _openLeaderboard,
                           onToggleSimulation: _showBatterySimulationSheet,
                           onReturnToMenu: _controller.returnToMenu,
+                          onOpenSettings: _openSettings,
                         ),
                       ),
 
                     // Dual Thumb Start Overlay (in attract mode)
                     if (_controller.state == GamePlayState.attract)
-                      DualThumbStartOverlay(controller: _controller),
+                      DualThumbStartOverlay(
+                        controller: _controller,
+                        onOpenSettings: _openSettings,
+                        onOpenLeaderboard: _openLeaderboard,
+                      ),
 
                     // Countdown Sequence (3... 2... 1... GO!)
                     if (_controller.state == GamePlayState.countdown)
@@ -260,6 +275,7 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
                           onRetry: _controller.triggerStartCountdown,
                           onReturnToMenu: _controller.returnToMenu,
                           onOpenLeaderboard: _openLeaderboard,
+                          onOpenSettings: _openSettings,
                         ),
                       ),
                   ],

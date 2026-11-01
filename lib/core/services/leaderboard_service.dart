@@ -80,7 +80,7 @@ class LeaderboardService {
 
   Future<String> getPlayerHandle() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_playerHandleKey) ?? 'HERO_${DateTime.now().millisecond % 1000}';
+    return prefs.getString(_playerHandleKey) ?? 'PILOT';
   }
 
   Future<void> savePlayerHandle(String handle) async {
@@ -91,6 +91,12 @@ class LeaderboardService {
   Future<int> getLocalHighScore() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_localHighScoreKey) ?? 0;
+  }
+
+  Future<void> clearLocalScores() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_localScoresKey);
+    await prefs.remove(_localHighScoreKey);
   }
 
   Future<void> recordScore(ScoreEntry entry) async {
@@ -139,7 +145,7 @@ class LeaderboardService {
       }
     }
 
-    // Fallback: local scores + procedural mock records
+    // Fallback: local scores only (0 dummy/fake entries)
     return _getLocalScores(filterOnePercentClub: false);
   }
 
@@ -161,7 +167,7 @@ class LeaderboardService {
       }
     }
 
-    // Fallback: local scores + procedural mock records
+    // Fallback: local scores only (0 dummy/fake entries)
     return _getLocalScores(filterOnePercentClub: true);
   }
 
@@ -177,77 +183,12 @@ class LeaderboardService {
       } catch (_) {}
     }
 
-    // Add high quality seed benchmark entries if list is small
-    if (entries.length < 5) {
-      entries.addAll(_generateBenchmarkScores());
-    }
-
     List<ScoreEntry> filtered = entries;
     if (filterOnePercentClub) {
       filtered = entries.where((e) => e.batteryPct <= 1 && e.wasOverdrive).toList();
-      if (filtered.isEmpty) {
-        filtered.add(
-          ScoreEntry(
-            id: 'legend-01',
-            playerHandle: 'ZERO_HERO',
-            score: 48250,
-            survivalMs: 64200,
-            batteryPct: 1,
-            wasOverdrive: true,
-            failedHemisphere: 'LEFT',
-            createdAt: DateTime.now().subtract(const Duration(hours: 4)),
-          ),
-        );
-      }
     }
 
     filtered.sort((a, b) => b.score.compareTo(a.score));
     return filtered;
-  }
-
-  List<ScoreEntry> _generateBenchmarkScores() {
-    final now = DateTime.now();
-    return [
-      ScoreEntry(
-        id: 'bench-1',
-        playerHandle: 'SYNAPSE_X',
-        score: 52180,
-        survivalMs: 72400,
-        batteryPct: 1,
-        wasOverdrive: true,
-        failedHemisphere: 'RIGHT',
-        createdAt: now.subtract(const Duration(minutes: 32)),
-      ),
-      ScoreEntry(
-        id: 'bench-2',
-        playerHandle: 'NEURO_SLICER',
-        score: 38400,
-        survivalMs: 54100,
-        batteryPct: 6,
-        wasOverdrive: true,
-        failedHemisphere: 'LEFT',
-        createdAt: now.subtract(const Duration(hours: 2)),
-      ),
-      ScoreEntry(
-        id: 'bench-3',
-        playerHandle: 'CORTEX_99',
-        score: 29500,
-        survivalMs: 44800,
-        batteryPct: 84,
-        wasOverdrive: false,
-        failedHemisphere: 'RIGHT',
-        createdAt: now.subtract(const Duration(hours: 6)),
-      ),
-      ScoreEntry(
-        id: 'bench-4',
-        playerHandle: 'THUMB_GOD',
-        score: 22100,
-        survivalMs: 36200,
-        batteryPct: 4,
-        wasOverdrive: true,
-        failedHemisphere: 'LEFT',
-        createdAt: now.subtract(const Duration(days: 1)),
-      ),
-    ];
   }
 }
