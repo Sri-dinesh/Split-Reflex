@@ -1,8 +1,8 @@
-# Split Reflex
-
-A high-intensity, dual-hemisphere cognitive reflex arcade game built with Flutter.
-
-![Split Reflex](https://raw.githubusercontent.com/Sri-dinesh/Split-Reflex/main/web/icons/Icon-192.png)
+<div align="center">
+  <img src="assets/playstore_icon_512.png" width="160" height="160" alt="Split Reflex Icon" />
+  <h1>SPLIT REFLEX</h1>
+  <p><strong>A high-intensity, dual-hemisphere cognitive reflex arcade game built with Flutter.</strong></p>
+</div>
 
 ## Overview
 
