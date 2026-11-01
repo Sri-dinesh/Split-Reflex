@@ -73,6 +73,7 @@ class HemisphereState {
     required double screenWidth,
     required bool isOverdrive,
     required bool isGodMode,
+    bool isMutationEnabled = true,
     String themeName = 'monochrome',
     required void Function(int countdownSeconds) onSwapWarningTick,
     required void Function() onSwapExecuted,
@@ -94,7 +95,7 @@ class HemisphereState {
     final double timeUntilNextMutation = nextMutationTime - survivalTime;
 
     // Polarity Flip trigger at 45s
-    if (survivalTime >= 45.0 && !isPolarityInverted) {
+    if (isMutationEnabled && survivalTime >= 45.0 && !isPolarityInverted) {
       isPolarityInverted = true;
       polarityFlipWarningRemaining = 1.5;
     }
@@ -103,7 +104,7 @@ class HemisphereState {
     }
 
     // Tug-of-war active between 30s and 45s, and also resumes intermittently past 60s
-    isTugOfWarActive = (survivalTime >= 30.0 && survivalTime < 45.0) || (survivalTime >= 70.0);
+    isTugOfWarActive = isMutationEnabled && ((survivalTime >= 30.0 && survivalTime < 45.0) || (survivalTime >= 70.0));
     if (isTugOfWarActive) {
       tugOfWarTime += dt;
       // Oscillate split between 0.32W and 0.68W via sine wave: W/2 + 0.16W * sin(1.4t)
@@ -115,7 +116,7 @@ class HemisphereState {
     rawSplitPixels = screenWidth * splitX;
 
     // Swap Warning (2.0s before next mutation)
-    if (timeUntilNextMutation <= PhysicsConstants.swapWarningDuration && timeUntilNextMutation > 0.0) {
+    if (isMutationEnabled && timeUntilNextMutation <= PhysicsConstants.swapWarningDuration && timeUntilNextMutation > 0.0) {
       if (!isSwapWarning) {
         isSwapWarning = true;
       }

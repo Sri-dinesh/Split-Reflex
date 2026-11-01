@@ -465,6 +465,7 @@ class GameController extends ChangeNotifier {
       screenWidth: screenWidth,
       isOverdrive: batteryState.isOverdrive,
       isGodMode: batteryState.isGodMode,
+      isMutationEnabled: playMode == PlayHandMode.twoHands || (orbAlive && dartAlive),
       themeName: theme.name,
       onSwapWarningTick: (seconds) {
         ProceduralAudioSynth.instance.playSwapTick(isFinal: seconds == 1);
@@ -487,7 +488,9 @@ class GameController extends ChangeNotifier {
           : PhysicsConstants.orbDefaultGravity;
 
       final bool orbIsLeft = hemisphereState.leftMechanic == HemisphereMechanic.orb;
-      final bool orbHeld = orbIsLeft ? inputRouter.leftThumbHeld : inputRouter.rightThumbHeld;
+      final bool orbHeld = (playMode == PlayHandMode.oneHand && !dartAlive)
+          ? (inputRouter.leftThumbHeld || inputRouter.rightThumbHeld)
+          : (orbIsLeft ? inputRouter.leftThumbHeld : inputRouter.rightThumbHeld);
       if (orbAlive && orbHeld) {
         _orbHoldTimer += dt;
         if (_orbHoldTimer >= 0.12) {

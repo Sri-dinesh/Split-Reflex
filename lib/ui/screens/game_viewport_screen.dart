@@ -238,6 +238,7 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
                           controller: _controller,
                           onOpenLeaderboard: _openLeaderboard,
                           onToggleSimulation: _showBatterySimulationSheet,
+                          onReturnToMenu: _controller.returnToMenu,
                         ),
                       ),
 
