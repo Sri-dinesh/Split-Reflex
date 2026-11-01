@@ -1,0 +1,28 @@
+name: split_brain
+description: Split Reflex - Dual-hemisphere cognitive reflex arcade game.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  battery_plus: ^6.2.1
+  shared_preferences: ^2.3.3
+  supabase_flutter: ^2.8.1
+  audioplayers: ^6.1.0
+  share_plus: ^10.1.2
+  path_provider: ^2.1.5
+  vibration: ^2.0.1
+  sensors_plus: ^6.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

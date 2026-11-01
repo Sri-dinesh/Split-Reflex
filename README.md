@@ -1,0 +1,51 @@
+# Split Reflex
+
+A high-intensity, dual-hemisphere cognitive reflex arcade game built with Flutter.
+
+![Split Reflex](https://raw.githubusercontent.com/Sri-dinesh/Split-Reflex/main/web/icons/Icon-192.png)
+
+## Overview
+
+**Split Reflex** challenges neuro-motor coordination and divided attention by forcing the player's brain to simultaneously execute two completely independent cognitive mechanics across split screen hemispheres.
+
+Every 15 seconds, the engine mutates: the split boundary drifts, hemisphere mechanics swap sides, polarities invert, and speeds accelerate.
+
+---
+
+## 3 Selectable Game Pairs (6 Unique Mechanics)
+
+1. **CLASSIC**
+   - **Left (Orb)**: Gravity-inverted vertical thruster navigating through descending laser gates and ceiling/floor spikes.
+   - **Right (Dart)**: Precision horizontal rail-slider dodging falling monolith pillars via touch dragging or physical gyroscope tilt.
+
+2. **PHASE FLUX**
+   - **Left (Phase Core)**: Instant polarity-inverting core (*Cyan* ↔ *Crimson*). Must match incoming laser wall polarities to absorb energy instead of crashing.
+   - **Right (Slalom Drift)**: Undulating sine-wave chasm glider navigating through a mathematically winding canyon with startup runway stabilization.
+
+3. **PULSE REFLEX**
+   - **Left (Shield Ping)**: Rhythm-based kinetic deflector triggering calibrated shield pulses to bounce descending plasma bolts.
+   - **Right (Quantum Warp)**: Dual-rail binary hyper-hopper executing instantaneous teleportation jumps to dodge quantum blockades.
+
+---
+
+## Key Features
+
+- **Zero External Media Assets**: 100% procedural Canvas math rendering with custom shaders, CRT scanlines, and reactive bloom.
+- **In-Memory Synthesized Audio**: Real-time procedural audio engine generating pure 16-bit PCM WAV buffers in memory (zero audio asset files).
+- **Customizable Rulesets**:
+  - **1-Hand vs 2-Hands**: Solo independent survival or mutual death rule.
+  - **Solo vs Duo Co-Op**: Single-device dual-player mode with forensic blame autopsy attribution on death.
+  - **Touch vs Gyro Tilt**: Smooth physical sensor-based tilt steering with low-pass dampening.
+  - **4 Procedural Cyber Themes**: High-contrast Monochrome, Neon Synthwave, Matrix Terminal, and CyberGold.
+- **Battery Overdrive Engine**: Dynamically senses device battery levels — unlocks 3x Overdrive under 10% battery and 10x God Mode at 1% battery.
+- **Forensic Autopsy Receipts**: High-resolution receipt sharing card capturing exact survival time, mutation milestones, and battery status.
+
+---
+
+## Tech Stack & Architecture
+
+- **Framework**: Flutter 3.x (Multiplatform: Android, iOS, Web)
+- **State Management**: Riverpod (`flutter_riverpod`)
+- **Graphics**: Hardware-accelerated `CustomPainter` with custom bloom pass, floating particle pools, and spring physics
+- **Sensors & Platform**: `sensors_plus`, `battery_plus`, `vibration`, `share_plus`
+- **Testing**: Complete unit and widget test suite (`flutter test`)
