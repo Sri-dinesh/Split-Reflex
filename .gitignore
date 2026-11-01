@@ -9,6 +9,9 @@
 .history
 .svn/
 migrate_working_dir/
+*.bak
+*.tmp
+*~
 
 # IntelliJ related
 *.iml
@@ -16,12 +19,10 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Visual Studio Code
+.vscode/
 
-# Flutter/Dart/Pub related
+# Flutter / Dart / Pub
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
@@ -30,14 +31,54 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+ephemeral/
+**/Flutter/ephemeral/
+**/flutter/ephemeral/
 
-# Symbolication related
+# Generated plugin registrants
+**/GeneratedPluginRegistrant.*
+**/generated_plugin_registrant.*
+**/generated_plugins.cmake
+
+# Symbolication & Obfuscation Mappings
+# (Preserve your release mapping.txt securely for Play Console stack trace de-obfuscation)
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
+**/build/app/outputs/mapping/
 
-# Android Studio will place build artifacts here
+# Android Studio & Output Artifacts
 /android/app/debug
 /android/app/profile
 /android/app/release
+*.apk
+*.aab
+
+# Keystores & sensitive signing credentials (NEVER commit to version control)
+*.keystore
+*.jks
+key.properties
+local.properties
+**/android/key.properties
+**/android/local.properties
+
+# Google Services / Play Store API service account keys
+google-services.json
+GoogleService-Info.plist
+*-play-keystore.json
+api-*-key.json
+play-store-credentials.json
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Gradle & system cache
+.gradle/
+**/android/.gradle/
