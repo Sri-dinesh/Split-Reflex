@@ -1,0 +1,9 @@
+# ==============================================================================
+# Play Store Keystore Configuration Template
+# Copy this file to 'android/key.properties' and fill in your private credentials.
+# NEVER commit 'key.properties' or your '.jks / .keystore' file to Git!
+# ==============================================================================
+keyAlias=uploadKey
+keyPassword=yourKeystorePassword
+storeFile=../upload-keystore.jks
+storePassword=yourStorePassword

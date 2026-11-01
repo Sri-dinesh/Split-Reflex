@@ -1,4 +1,4 @@
-package com.splitbrain.idk
+package com.splitreflex.game
 
 import io.flutter.embedding.android.FlutterActivity
 
