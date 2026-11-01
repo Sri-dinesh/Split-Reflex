@@ -16,6 +16,7 @@ import '../overlays/death_receipt_overlay.dart';
 import '../overlays/dual_thumb_start_overlay.dart';
 import '../overlays/leaderboard_sheet.dart';
 import '../overlays/top_hud_pill.dart';
+import 'cinematic_splash_screen.dart';
 
 class GameViewportScreen extends ConsumerStatefulWidget {
   const GameViewportScreen({super.key});
@@ -30,6 +31,7 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
   late final Ticker _ticker;
   Duration _lastElapsed = Duration.zero;
   StreamSubscription? _accelerometerSubscription;
+  bool _showSplash = true;
 
   @override
   void initState() {
@@ -282,6 +284,20 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
                 );
               },
             ),
+
+            // 3. Cinematic Procedural Splash Screen
+            if (_showSplash)
+              Positioned.fill(
+                child: CinematicSplashScreen(
+                  onComplete: () {
+                    if (mounted) {
+                      setState(() {
+                        _showSplash = false;
+                      });
+                    }
+                  },
+                ),
+              ),
           ],
         ),
       ),

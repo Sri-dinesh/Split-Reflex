@@ -1,12 +1,11 @@
-import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import '../../core/constants/app_icon_data.dart';
 import '../../core/constants/palette.dart';
 import '../../core/services/haptic_choreographer.dart';
 import '../../core/services/procedural_audio_synth.dart';
 import '../../engine/game_controller.dart';
+import '../widgets/split_diamond_emblem.dart';
 
 class DualThumbStartOverlay extends StatelessWidget {
   final GameController controller;
@@ -233,45 +232,13 @@ class DualThumbStartOverlay extends StatelessWidget {
   }
 
   Widget _buildHeroIdentity(bool isCompact) {
-    final double iconSize = isCompact ? 64.0 : 78.0;
+    final double iconSize = isCompact ? 68.0 : 82.0;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Official Split Reflex App Icon
-        Container(
-          width: iconSize,
-          height: iconSize,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(iconSize * 0.22),
-            boxShadow: [
-              BoxShadow(
-                color: SplitPalette.nearMissCyan.withOpacity(0.35),
-                blurRadius: 20.0,
-                spreadRadius: 1.0,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.6),
-                blurRadius: 12.0,
-                offset: const Offset(0, 4),
-              ),
-            ],
-            border: Border.all(
-              color: Colors.white.withOpacity(0.2),
-              width: 1.2,
-            ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(iconSize * 0.21),
-            child: Image.memory(
-              base64Decode(kAppIconPngBase64),
-              width: iconSize,
-              height: iconSize,
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
+        // Custom Illustrated Split Reflex Emblem (Cyan / Crimson Split Diamond)
+        SplitDiamondEmblem(size: iconSize),
         SizedBox(height: isCompact ? 10.0 : 14.0),
 
         // Title
