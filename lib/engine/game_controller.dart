@@ -305,9 +305,9 @@ class GameController extends ChangeNotifier {
     inputRouter.resetActivity();
     particlePool.clear();
 
-    // 3.0 second startup grace period: 0 obstacles spawn on start
-    _laserSpawnTimer = -3.0;
-    _monolithSpawnTimer = -3.0;
+    // 3.5 second startup runway grace period across all modes: 0 obstacles spawn on start
+    _laserSpawnTimer = -3.5;
+    _monolithSpawnTimer = -3.5;
     _postSwapGraceTimer = 0.0;
 
     // Clear obstacles
@@ -452,7 +452,10 @@ class GameController extends ChangeNotifier {
     final double currentInterval = survivalTime < 60.0 ? 15.0 : 10.0;
     if (survivalTime - lastMutationTimestamp >= currentInterval) {
       lastMutationTimestamp = survivalTime;
-      executeMutation();
+      // In 1-hand survival mode, keep surviving lane stable once one side has fallen
+      if (playMode == PlayHandMode.twoHands || (orbAlive && dartAlive)) {
+        executeMutation();
+      }
     }
 
     // Update hemisphere mutation state machine
@@ -790,8 +793,8 @@ class GameController extends ChangeNotifier {
   }
 
   void _updateObstacleSpawners(double dt) {
-    // 3.0 second initial grace period across ALL game modes: 0 obstacles spawn on start
-    if (survivalTime < 3.0) return;
+    // 3.5 second initial runway grace period across ALL game modes: 0 obstacles spawn on start
+    if (survivalTime < 3.5) return;
 
     final double speedScale = survivalTime >= 45.0 ? 1.35 : 1.0;
 
@@ -921,6 +924,8 @@ class GameController extends ChangeNotifier {
             polarityWalls.removeAt(i);
           }
         }
+      } else {
+        polarityWalls.clear();
       }
 
       if (dartAlive) {
@@ -929,7 +934,7 @@ class GameController extends ChangeNotifier {
           _monolithSpawnTimer = 0.0;
           final double sLeft = hemisphereState.getLaneLeft(HemisphereMechanic.slalomDrift, screenWidth);
           final double sRight = hemisphereState.getLaneRight(HemisphereMechanic.slalomDrift, screenWidth);
-          final double introFactor = (survivalTime / 3.5).clamp(0.0, 1.0);
+          final double introFactor = ((survivalTime - 3.5) / 3.5).clamp(0.0, 1.0);
           final double chasmCenter = slalomDrift.getChasmCenter(0.0, sLeft, sRight, introFactor: introFactor);
           final double offset = (rng.nextDouble() - 0.5) * 40.0;
 
@@ -949,6 +954,8 @@ class GameController extends ChangeNotifier {
             slalomPylons.removeAt(i);
           }
         }
+      } else {
+        slalomPylons.clear();
       }
     } else if (gamePairMode == GamePairMode.pulseReflex) {
       // Pair 3: Plasma Bolts & Quantum Blockades
@@ -971,6 +978,8 @@ class GameController extends ChangeNotifier {
             plasmaBolts.removeAt(i);
           }
         }
+      } else {
+        plasmaBolts.clear();
       }
 
       if (dartAlive) {
@@ -994,6 +1003,8 @@ class GameController extends ChangeNotifier {
             quantumBlockades.removeAt(i);
           }
         }
+      } else {
+        quantumBlockades.clear();
       }
     }
   }
@@ -1058,7 +1069,13 @@ class GameController extends ChangeNotifier {
       if (orbAlive) {
         for (final w in polarityWalls) {
           if (w.absorbed) continue;
-          if ((w.y - phaseCore.y).abs() < 22.0) {
+          final double coreTop = phaseCore.y - 18.0;
+          final double coreBottom = phaseCore.y + 18.0;
+          final double wallTop = w.y;
+          final double wallBottom = w.y + w.height;
+
+          // Check vertical intersection
+          if (wallBottom >= coreTop && wallTop <= coreBottom) {
             if (w.color == phaseCore.polarity) {
               // Absorbed successfully!
               w.absorbed = true;
@@ -1079,6 +1096,14 @@ class GameController extends ChangeNotifier {
               );
               return;
             }
+          } else if (wallTop > coreBottom && !w.absorbed) {
+            // Breached defense without absorption
+            _handleHemisphereFailure(
+              failedHemisphere: hemisphereState.leftMechanic == HemisphereMechanic.phaseCore ? 'LEFT' : 'RIGHT',
+              failedMechanic: 'PHASE CORE',
+              impactPoint: Offset(phaseCore.x, phaseCore.y),
+            );
+            return;
           }
         }
       }
@@ -1087,12 +1112,12 @@ class GameController extends ChangeNotifier {
         final double sLeft = hemisphereState.getLaneLeft(HemisphereMechanic.slalomDrift, screenWidth);
         final double sRight = hemisphereState.getLaneRight(HemisphereMechanic.slalomDrift, screenWidth);
         final double laneW = sRight - sLeft;
-        final double introFactor = (survivalTime / 3.5).clamp(0.0, 1.0);
+        final double introFactor = ((survivalTime - 3.5) / 3.5).clamp(0.0, 1.0);
         final double center = slalomDrift.getChasmCenter(slalomDrift.y, sLeft, sRight, introFactor: introFactor);
         final double chasmW = slalomDrift.getChasmWidth(laneW, introFactor: introFactor);
 
-        // Slalom boundary collision (skip early startup < 1.5s so player isn't instantly eliminated)
-        if (survivalTime >= 1.5) {
+        // Slalom boundary collision (skip initial grace period < 3.5s so player has time to orient)
+        if (survivalTime >= 3.5) {
           if (slalomDrift.x < center - chasmW * 0.5 + 8.0 || slalomDrift.x > center + chasmW * 0.5 - 8.0) {
             _handleHemisphereFailure(
               failedHemisphere: hemisphereState.leftMechanic == HemisphereMechanic.slalomDrift ? 'LEFT' : 'RIGHT',
@@ -1126,7 +1151,7 @@ class GameController extends ChangeNotifier {
 
         for (final bolt in plasmaBolts) {
           if (bolt.deflected) continue;
-          if ((bolt.y - shieldPing.y).abs() < 18.0) {
+          if (bolt.y >= shieldPing.y - 20.0 && bolt.y <= shieldPing.y + 20.0) {
             if (shieldPing.isDeflecting) {
               bolt.deflected = true;
               currentScore += 75.0 * batteryState.scoreMultiplier;
@@ -1136,7 +1161,7 @@ class GameController extends ChangeNotifier {
                 color: SplitPalette.nearMissCyan,
                 speed: 220.0,
               );
-            } else if (bolt.y > shieldPing.y + 12.0) {
+            } else if (bolt.y > shieldPing.y + 6.0) {
               _handleHemisphereFailure(
                 failedHemisphere: hemisphereState.leftMechanic == HemisphereMechanic.shieldPing ? 'LEFT' : 'RIGHT',
                 failedMechanic: 'SHIELD',
@@ -1144,6 +1169,14 @@ class GameController extends ChangeNotifier {
               );
               return;
             }
+          } else if (bolt.y > shieldPing.y + 20.0 && !bolt.deflected) {
+            // Bolt breached shield barrier!
+            _handleHemisphereFailure(
+              failedHemisphere: hemisphereState.leftMechanic == HemisphereMechanic.shieldPing ? 'LEFT' : 'RIGHT',
+              failedMechanic: 'SHIELD',
+              impactPoint: Offset(shieldMidX, shieldPing.y),
+            );
+            return;
           }
         }
       }
@@ -1156,7 +1189,9 @@ class GameController extends ChangeNotifier {
 
         for (final b in quantumBlockades) {
           final double bx = b.track == QuantumTrack.left ? trackLeftX : trackRightX;
-          if ((b.y - quantumWarp.y).abs() < 24.0 && (quantumWarp.currentX - bx).abs() < 20.0) {
+          final bool onSameTrack = (quantumWarp.currentX - bx).abs() < 24.0;
+          final bool verticalOverlap = (b.y - quantumWarp.y).abs() < (b.height * 0.5 + 16.0);
+          if (onSameTrack && verticalOverlap) {
             _handleHemisphereFailure(
               failedHemisphere: hemisphereState.leftMechanic == HemisphereMechanic.quantumWarp ? 'LEFT' : 'RIGHT',
               failedMechanic: 'QUANTUM',
@@ -1297,15 +1332,48 @@ class GameController extends ChangeNotifier {
     _shakeIntensity = math.max(_shakeIntensity, intensity);
   }
 
+  HemisphereMechanic _resolveTargetMechanic(bool isLeft) {
+    if (playMode == PlayHandMode.oneHand) {
+      if (!orbAlive && dartAlive) {
+        switch (gamePairMode) {
+          case GamePairMode.classic:
+            return HemisphereMechanic.dart;
+          case GamePairMode.phaseFlux:
+            return HemisphereMechanic.slalomDrift;
+          case GamePairMode.pulseReflex:
+            return HemisphereMechanic.quantumWarp;
+        }
+      } else if (orbAlive && !dartAlive) {
+        switch (gamePairMode) {
+          case GamePairMode.classic:
+            return HemisphereMechanic.orb;
+          case GamePairMode.phaseFlux:
+            return HemisphereMechanic.phaseCore;
+          case GamePairMode.pulseReflex:
+            return HemisphereMechanic.shieldPing;
+        }
+      }
+    }
+    return isLeft ? hemisphereState.leftMechanic : hemisphereState.rightMechanic;
+  }
+
   // Unified Input Routing across dynamic hemisphere swaps
   void handleSidePointerDown(bool isLeft, Offset localPosition) {
     if (state != GamePlayState.playing) return;
 
-    final mechanic = isLeft ? hemisphereState.leftMechanic : hemisphereState.rightMechanic;
+    final mechanic = _resolveTargetMechanic(isLeft);
     if (!isMechanicAlive(mechanic)) return;
 
     final double laneLeft = hemisphereState.getLaneLeft(mechanic, screenWidth);
     final double laneRight = hemisphereState.getLaneRight(mechanic, screenWidth);
+
+    final double targetTapX;
+    if (playMode == PlayHandMode.oneHand && (!orbAlive || !dartAlive)) {
+      final double normalizedX = (localPosition.dx / screenWidth).clamp(0.0, 1.0);
+      targetTapX = laneLeft + normalizedX * (laneRight - laneLeft);
+    } else {
+      targetTapX = localPosition.dx;
+    }
 
     switch (mechanic) {
       case HemisphereMechanic.orb:
@@ -1336,10 +1404,10 @@ class GameController extends ChangeNotifier {
         HapticChoreographer.instance.triggerTap();
         break;
       case HemisphereMechanic.dart:
-        dart.handleTap(localPosition.dx, laneLeft: laneLeft, laneRight: laneRight);
+        dart.handleTap(targetTapX, laneLeft: laneLeft, laneRight: laneRight);
         break;
       case HemisphereMechanic.slalomDrift:
-        slalomDrift.targetX = localPosition.dx.clamp(laneLeft + 16.0, laneRight - 16.0);
+        slalomDrift.targetX = targetTapX.clamp(laneLeft + 16.0, laneRight - 16.0);
         break;
       case HemisphereMechanic.quantumWarp:
         quantumWarp.warp();
@@ -1358,18 +1426,26 @@ class GameController extends ChangeNotifier {
   void handleSidePointerMove(bool isLeft, double deltaX, Offset localPosition) {
     if (state != GamePlayState.playing) return;
 
-    final mechanic = isLeft ? hemisphereState.leftMechanic : hemisphereState.rightMechanic;
+    final mechanic = _resolveTargetMechanic(isLeft);
     if (!isMechanicAlive(mechanic)) return;
 
     final double laneLeft = hemisphereState.getLaneLeft(mechanic, screenWidth);
     final double laneRight = hemisphereState.getLaneRight(mechanic, screenWidth);
 
+    final double targetTapX;
+    if (playMode == PlayHandMode.oneHand && (!orbAlive || !dartAlive)) {
+      final double normalizedX = (localPosition.dx / screenWidth).clamp(0.0, 1.0);
+      targetTapX = laneLeft + normalizedX * (laneRight - laneLeft);
+    } else {
+      targetTapX = localPosition.dx;
+    }
+
     switch (mechanic) {
       case HemisphereMechanic.dart:
-        dart.handleDragDelta(deltaX, currentX: localPosition.dx, laneLeft: laneLeft, laneRight: laneRight);
+        dart.handleDragDelta(deltaX, currentX: targetTapX, laneLeft: laneLeft, laneRight: laneRight);
         break;
       case HemisphereMechanic.slalomDrift:
-        slalomDrift.targetX = localPosition.dx.clamp(laneLeft + 16.0, laneRight - 16.0);
+        slalomDrift.targetX = targetTapX.clamp(laneLeft + 16.0, laneRight - 16.0);
         break;
       default:
         break;

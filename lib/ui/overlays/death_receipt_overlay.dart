@@ -7,6 +7,8 @@ import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/constants/palette.dart';
+import '../../core/services/haptic_choreographer.dart';
+import '../../core/services/procedural_audio_synth.dart';
 import '../../engine/game_controller.dart';
 
 class DeathReceiptOverlay extends StatefulWidget {
@@ -582,7 +584,11 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
               alignment: WrapAlignment.center,
               children: [
                 ElevatedButton.icon(
-                  onPressed: widget.onRetry,
+                  onPressed: () {
+                    ProceduralAudioSynth.instance.playSwapTick(isFinal: false);
+                    HapticChoreographer.instance.triggerTap();
+                    widget.onRetry();
+                  },
                   icon: const Icon(Icons.refresh, size: 18),
                   label: const Text(
                     'RETRY RUN',
@@ -597,7 +603,11 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                 ),
                 if (widget.onReturnToMenu != null)
                   ElevatedButton.icon(
-                    onPressed: widget.onReturnToMenu,
+                    onPressed: () {
+                      ProceduralAudioSynth.instance.playTap();
+                      HapticChoreographer.instance.triggerTap();
+                      widget.onReturnToMenu!();
+                    },
                     icon: const Icon(Icons.tune_rounded, size: 18),
                     label: const Text(
                       'SETTINGS',

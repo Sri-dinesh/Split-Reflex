@@ -401,5 +401,57 @@ void main() {
       expect(controller.slalomDrift.x, greaterThan(0.0));
       expect(controller.phaseCore.x, greaterThan(200.0));
     });
+
+    test('1-Hand Mode: Surviving side crashing triggers game over autopsy', () {
+      final controller = GameController();
+      controller.updateDimensions(400.0, 800.0);
+      controller.setPlayMode(PlayHandMode.oneHand);
+      controller.startRun();
+      controller.tick(Duration.zero, 4.0); // Pass grace period
+
+      // Kill Left (Orb)
+      controller.orb.y = 5.0; // spikes
+      controller.tick(Duration.zero, 0.016);
+
+      // Orb is dead, Dart is alive
+      expect(controller.orbAlive, isFalse);
+      expect(controller.dartAlive, isTrue);
+      expect(controller.state, equals(GamePlayState.playing));
+
+      // Now crash Dart into a monolith
+      controller.monoliths.add(
+        Monolith(
+          x: controller.dart.x,
+          y: controller.dart.railY - 5.0,
+          width: 40.0,
+          height: 40.0,
+          speed: 100.0,
+        ),
+      );
+      controller.tick(Duration.zero, 0.016);
+
+      // Both sides are now dead, triggers death
+      expect(controller.dartAlive, isFalse);
+      expect(controller.state, equals(GamePlayState.deathSlowmo));
+    });
+
+    test('PulseReflex missed plasma bolt breaches shield and triggers death', () {
+      final controller = GameController();
+      controller.updateDimensions(400.0, 800.0);
+      controller.setGamePairMode(GamePairMode.pulseReflex);
+      controller.startRun();
+      controller.tick(Duration.zero, 4.0); // Pass grace period
+
+      // Add a plasma bolt that has passed shield without deflection
+      controller.plasmaBolts.add(
+        PlasmaBolt(
+          y: controller.shieldPing.y + 25.0,
+          speed: 380.0,
+        ),
+      );
+      controller.tick(Duration.zero, 0.016);
+
+      expect(controller.state, equals(GamePlayState.deathSlowmo));
+    });
   });
 }

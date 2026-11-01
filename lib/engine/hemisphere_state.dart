@@ -17,6 +17,7 @@ class HemisphereState {
   // Current assignment
   HemisphereMechanic leftMechanic = HemisphereMechanic.orb;
   HemisphereMechanic rightMechanic = HemisphereMechanic.dart;
+  HemisphereMechanic initialLeftMechanic = HemisphereMechanic.orb;
 
   // Split Divider position
   double splitX = 0.5; // normalized 0.0 - 1.0 (defaults to 0.5W)
@@ -45,6 +46,7 @@ class HemisphereState {
 
   // Initial setup
   void reset(double screenWidth, {HemisphereMechanic initialLeft = HemisphereMechanic.orb, HemisphereMechanic initialRight = HemisphereMechanic.dart}) {
+    initialLeftMechanic = initialLeft;
     leftMechanic = initialLeft;
     rightMechanic = initialRight;
     splitX = 0.5;
@@ -184,7 +186,7 @@ class HemisphereState {
 
     // Left hemisphere starts Dark, Right starts Light.
     // If swapped, left is Light, right is Dark.
-    final bool leftIsOriginal = (leftMechanic == HemisphereMechanic.orb);
+    final bool leftIsOriginal = (leftMechanic == initialLeftMechanic);
 
     final Color targetLeftBg = leftIsOriginal ? baseDark : baseLight;
     final Color targetLeftFg = leftIsOriginal ? baseLight : baseDark;
