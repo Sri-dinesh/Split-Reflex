@@ -13,7 +13,7 @@ migrate_working_dir/
 *.tmp
 *~
 
-# IntelliJ related
+# IntelliJ / Android Studio
 *.iml
 *.ipr
 *.iws
@@ -24,24 +24,20 @@ migrate_working_dir/
 
 # Flutter / Dart / Pub
 **/doc/api/
-**/ios/Flutter/.last_build_id
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
 /build/
-ephemeral/
-**/Flutter/ephemeral/
-**/flutter/ephemeral/
 
 # Generated plugin registrants
 **/GeneratedPluginRegistrant.*
 **/generated_plugin_registrant.*
-**/generated_plugins.cmake
 
 # Symbolication & Obfuscation Mappings
-# (Preserve your release mapping.txt securely for Play Console stack trace de-obfuscation)
+# (Preserve release mapping.txt securely for Play Console de-obfuscation)
 app.*.symbols
 app.*.map.json
 **/build/app/outputs/mapping/
@@ -63,7 +59,6 @@ local.properties
 
 # Google Services / Play Store API service account keys
 google-services.json
-GoogleService-Info.plist
 *-play-keystore.json
 api-*-key.json
 play-store-credentials.json
@@ -82,3 +77,4 @@ fastlane/test_output
 # Gradle & system cache
 .gradle/
 **/android/.gradle/
+**/android/captures/
