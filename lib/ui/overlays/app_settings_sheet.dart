@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/palette.dart';
 import '../../core/services/haptic_choreographer.dart';
@@ -6,6 +7,10 @@ import '../../core/services/leaderboard_service.dart';
 import '../../core/services/preferences_service.dart';
 import '../../core/services/procedural_audio_synth.dart';
 import '../../engine/game_controller.dart';
+
+const String _kWebsiteUrl = 'https://splitreflex.vercel.app/';
+const String _kTermsUrl = 'https://splitreflex.vercel.app/terms';
+const String _kPrivacyUrl = 'https://splitreflex.vercel.app/privacy';
 
 class AppSettingsSheet extends StatefulWidget {
   final GameController controller;
@@ -240,6 +245,26 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
           ),
           actions: [
             TextButton(
+              onPressed: () => _openExternalUrl(_kPrivacyUrl),
+              child: const Text(
+                'Full Policy',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => _openExternalUrl(_kTermsUrl),
+              child: const Text(
+                'Terms',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text(
                 'Close',
@@ -253,6 +278,17 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
         );
       },
     );
+  }
+
+  Future<void> _openExternalUrl(String urlString) async {
+    final uri = Uri.parse(urlString);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {
+      // Gracefully handle if browser is unavailable
+    }
   }
 
   /// Deletes every byte the app has written: scores, callsign and preferences.
@@ -924,8 +960,8 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
 
                     const SizedBox(height: 20.0),
 
-                    // Section 6: Data ownership & privacy
-                    _buildSectionHeader('DATA & PRIVACY'),
+                    // Section 6: Legal & Data Privacy
+                    _buildSectionHeader('LEGAL & DATA PRIVACY'),
                     _buildSettingCard(
                       children: [
                         ListTile(
@@ -943,7 +979,7 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                             ),
                           ),
                           subtitle: const Text(
-                            'Offline only. No ads, tracking or network access.',
+                            'Offline-only architecture. Zero telemetry tracking.',
                             style: TextStyle(
                               color: Colors.white38,
                               fontSize: 11,
@@ -955,6 +991,105 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                             size: 20,
                           ),
                           onTap: _showPrivacyAndData,
+                        ),
+                        const Divider(
+                          color: Colors.white10,
+                          height: 1.0,
+                          indent: 46.0,
+                        ),
+                        ListTile(
+                          leading: const Icon(
+                            Icons.policy_outlined,
+                            color: SplitPalette.nearMissCyan,
+                            size: 20,
+                          ),
+                          title: const Text(
+                            'Privacy Policy',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'splitreflex.vercel.app/privacy',
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: 11,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.open_in_new_rounded,
+                            color: Colors.white38,
+                            size: 18,
+                          ),
+                          onTap: () => _openExternalUrl(_kPrivacyUrl),
+                        ),
+                        const Divider(
+                          color: Colors.white10,
+                          height: 1.0,
+                          indent: 46.0,
+                        ),
+                        ListTile(
+                          leading: const Icon(
+                            Icons.gavel_rounded,
+                            color: SplitPalette.nearMissCyan,
+                            size: 20,
+                          ),
+                          title: const Text(
+                            'Terms & Conditions',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'splitreflex.vercel.app/terms',
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: 11,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.open_in_new_rounded,
+                            color: Colors.white38,
+                            size: 18,
+                          ),
+                          onTap: () => _openExternalUrl(_kTermsUrl),
+                        ),
+                        const Divider(
+                          color: Colors.white10,
+                          height: 1.0,
+                          indent: 46.0,
+                        ),
+                        ListTile(
+                          leading: const Icon(
+                            Icons.language_rounded,
+                            color: SplitPalette.nearMissCyan,
+                            size: 20,
+                          ),
+                          title: const Text(
+                            'Official Website',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'splitreflex.vercel.app',
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: 11,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.open_in_new_rounded,
+                            color: Colors.white38,
+                            size: 18,
+                          ),
+                          onTap: () => _openExternalUrl(_kWebsiteUrl),
                         ),
                         const Divider(
                           color: Colors.white10,
