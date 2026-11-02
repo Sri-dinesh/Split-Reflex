@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 class MathUtils {
@@ -16,7 +17,10 @@ class MathUtils {
     double decay = 8.0,
     double frequency = 25.0,
   }) {
-    return target + delta * math.exp(-decay * timeElapsed) * math.cos(frequency * timeElapsed);
+    return target +
+        delta *
+            math.exp(-decay * timeElapsed) *
+            math.cos(frequency * timeElapsed);
   }
 
   /// Test if a circle at (cx, cy) with radius r intersects with an axis-aligned bounding box (AABB)
@@ -67,11 +71,17 @@ class MathUtils {
     }
 
     // Projection parameter t
-    final double t = (((center.dx - p1.dx) * dx + (center.dy - p1.dy) * dy) / lenSq).clamp(0.0, 1.0);
+    final double t =
+        (((center.dx - p1.dx) * dx + (center.dy - p1.dy) * dy) / lenSq).clamp(
+          0.0,
+          1.0,
+        );
     final double projX = p1.dx + t * dx;
     final double projY = p1.dy + t * dy;
 
-    final double distSq = (center.dx - projX) * (center.dx - projX) + (center.dy - projY) * (center.dy - projY);
+    final double distSq =
+        (center.dx - projX) * (center.dx - projX) +
+        (center.dy - projY) * (center.dy - projY);
     return distSq <= (radius * radius);
   }
 }

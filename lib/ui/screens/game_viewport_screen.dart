@@ -1,8 +1,11 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+
 import '../../core/constants/palette.dart';
 import '../../core/services/battery_telemetry_service.dart';
 import '../../core/services/haptic_choreographer.dart';
@@ -26,7 +29,7 @@ class GameViewportScreen extends ConsumerStatefulWidget {
 }
 
 class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final GameController _controller;
   late final Ticker _ticker;
   Duration _lastElapsed = Duration.zero;
@@ -38,6 +41,8 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
     super.initState();
     _controller = GameController();
 
+    WidgetsBinding.instance.addObserver(this);
+
     // Initialize in-memory procedural audio and haptics
     ProceduralAudioSynth.instance.init();
     HapticChoreographer.instance.init();
@@ -45,18 +50,18 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
 
     // Listen to device tilt / accelerometer for Physical Gyro Tilt mode with low-latency game interval
     try {
-      _accelerometerSubscription = accelerometerEventStream(
-        samplingPeriod: SensorInterval.gameInterval,
-      ).listen(
-        (AccelerometerEvent event) {
-          // In portrait orientation, tilting left/right alters the 'x' axis (-9.8 to +9.8)
-          // Negative x = tilted right, positive x = tilted left
-          _controller.updateRawTilt(-event.x);
-        },
-        onError: (err) {
-          _controller.isGyroAvailable = false;
-        },
-      );
+      _accelerometerSubscription =
+          accelerometerEventStream(samplingPeriod: SensorInterval.gameInterval)
+              .listen(
+                (AccelerometerEvent event) {
+                  // In portrait orientation, tilting left/right alters the 'x' axis (-9.8 to +9.8)
+                  // Negative x = tilted right, positive x = tilted left
+                  _controller.updateRawTilt(-event.x);
+                },
+                onError: (err) {
+                  _controller.isGyroAvailable = false;
+                },
+              );
     } catch (_) {
       _controller.isGyroAvailable = false;
     }
@@ -87,11 +92,45 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _accelerometerSubscription?.cancel();
     _ticker.dispose();
     _controller.dispose();
-    ProceduralAudioSynth.instance.dispose();
+    ProceduralAudioSynth.instance.releasePlayers();
     super.dispose();
+  }
+
+  /// Stops simulating while the app is not visible so a backgrounded game does
+  /// not burn battery, and so a long pause cannot produce a huge delta time.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        if (!_ticker.isActive) {
+          _lastElapsed = Duration.zero;
+          _ticker.start();
+        }
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        if (_ticker.isActive) {
+          _ticker.stop();
+        }
+        _lastElapsed = Duration.zero;
+        break;
+    }
+  }
+
+  /// Handles the system back gesture: leave an active run to the menu instead
+  /// of killing the app mid-game.
+  void _handleBackNavigation() {
+    if (_controller.state == GamePlayState.attract) {
+      SystemNavigator.pop();
+      return;
+    }
+    _controller.returnToMenu();
   }
 
   void _openLeaderboard() {
@@ -117,11 +156,16 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1E1E1E),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16.0))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
+      ),
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 16.0,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -139,47 +183,106 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
                 const SizedBox(height: 6.0),
                 const Text(
                   'Test real-time hardware reactive Overdrive & 1% God Mode without draining battery.',
-                  style: TextStyle(color: Colors.white54, fontSize: 11, fontFamily: 'monospace'),
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                  ),
                 ),
                 const SizedBox(height: 16.0),
                 ListTile(
                   tileColor: Colors.black26,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-                  leading: const Icon(Icons.flash_on, color: SplitPalette.godModeGold),
-                  title: const Text('1% UNPLUGGED (10.0x GOD MODE)', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, fontFamily: 'monospace')),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  leading: const Icon(
+                    Icons.flash_on,
+                    color: SplitPalette.godModeGold,
+                  ),
+                  title: const Text(
+                    '1% UNPLUGGED (10.0x GOD MODE)',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
                   onTap: () {
-                    batteryService.setSimulationOverride(level: 1, isCharging: false);
+                    batteryService.setSimulationOverride(
+                      level: 1,
+                      isCharging: false,
+                    );
                     Navigator.pop(context);
                   },
                 ),
                 const SizedBox(height: 8.0),
                 ListTile(
                   tileColor: Colors.black26,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-                  leading: const Icon(Icons.bolt, color: SplitPalette.hazardCrimson),
-                  title: const Text('5% UNPLUGGED (3.0x OVERDRIVE)', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, fontFamily: 'monospace')),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  leading: const Icon(
+                    Icons.bolt,
+                    color: SplitPalette.hazardCrimson,
+                  ),
+                  title: const Text(
+                    '5% UNPLUGGED (3.0x OVERDRIVE)',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
                   onTap: () {
-                    batteryService.setSimulationOverride(level: 5, isCharging: false);
+                    batteryService.setSimulationOverride(
+                      level: 5,
+                      isCharging: false,
+                    );
                     Navigator.pop(context);
                   },
                 ),
                 const SizedBox(height: 8.0),
                 ListTile(
                   tileColor: Colors.black26,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
                   leading: const Icon(Icons.power, color: Colors.orangeAccent),
-                  title: const Text('5% PLUGGED IN (CHARGER PENALTY 1.0x)', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, fontFamily: 'monospace')),
+                  title: const Text(
+                    '5% PLUGGED IN (CHARGER PENALTY 1.0x)',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
                   onTap: () {
-                    batteryService.setSimulationOverride(level: 5, isCharging: true);
+                    batteryService.setSimulationOverride(
+                      level: 5,
+                      isCharging: true,
+                    );
                     Navigator.pop(context);
                   },
                 ),
                 const SizedBox(height: 8.0),
                 ListTile(
                   tileColor: Colors.black26,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
                   leading: const Icon(Icons.refresh, color: Colors.white70),
-                  title: const Text('USE REAL HARDWARE TELEMETRY', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700, fontFamily: 'monospace')),
+                  title: const Text(
+                    'USE REAL HARDWARE TELEMETRY',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
                   onTap: () {
                     batteryService.clearSimulationOverride();
                     Navigator.pop(context);
@@ -198,114 +301,122 @@ class _GameViewportScreenState extends ConsumerState<GameViewportScreen>
     // Watch battery service
     ref.watch(batteryServiceProvider);
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Listener(
-        // High-precision raw pointer arena bypassing standard GestureDetector theft
-        onPointerDown: (e) {
-          _controller.inputRouter.handlePointerDown(
-            event: e,
-            splitX: _controller.hemisphereState.rawSplitPixels,
-            onPointerDown: _controller.handleSidePointerDown,
-          );
-        },
-        onPointerMove: (e) {
-          _controller.inputRouter.handlePointerMove(
-            event: e,
-            splitX: _controller.hemisphereState.rawSplitPixels,
-            onPointerMove: _controller.handleSidePointerMove,
-          );
-        },
-        onPointerUp: (e) {
-          _controller.inputRouter.handlePointerUp(
-            event: e,
-            splitX: _controller.hemisphereState.rawSplitPixels,
-          );
-        },
-        onPointerCancel: (e) {
-          _controller.inputRouter.handlePointerCancel(
-            event: e,
-            splitX: _controller.hemisphereState.rawSplitPixels,
-          );
-        },
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 1. Master Canvas Render Pass (Isolated GPU Layer via RepaintBoundary)
-            RepaintBoundary(
-              child: CustomPaint(
-                painter: MasterGamePainter(controller: _controller),
-                size: Size.infinite,
-              ),
-            ),
-
-            // 2. Reactive UI Overlays Layer
-            ListenableBuilder(
-              listenable: _controller,
-              builder: (context, _) {
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Active HUD Pill
-                    if (_controller.state != GamePlayState.deathReceipt)
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        child: TopHudPill(
-                          controller: _controller,
-                          onOpenLeaderboard: _openLeaderboard,
-                          onToggleSimulation: _showBatterySimulationSheet,
-                          onReturnToMenu: _controller.returnToMenu,
-                          onOpenSettings: _openSettings,
-                        ),
-                      ),
-
-                    // Dual Thumb Start Overlay (in attract mode)
-                    if (_controller.state == GamePlayState.attract)
-                      DualThumbStartOverlay(
-                        controller: _controller,
-                        onOpenSettings: _openSettings,
-                        onOpenLeaderboard: _openLeaderboard,
-                      ),
-
-                    // Countdown Sequence (3... 2... 1... GO!)
-                    if (_controller.state == GamePlayState.countdown)
-                      CountdownOverlay(controller: _controller),
-
-                    // Death Receipt Card (viral share autopsy modal)
-                    if (_controller.state == GamePlayState.deathReceipt && _controller.latestAutopsy != null)
-                      Container(
-                        color: Colors.black.withOpacity(0.85),
-                        child: DeathReceiptOverlay(
-                          autopsy: _controller.latestAutopsy!,
-                          controller: _controller,
-                          onRetry: _controller.triggerStartCountdown,
-                          onReturnToMenu: _controller.returnToMenu,
-                          onOpenLeaderboard: _openLeaderboard,
-                          onOpenSettings: _openSettings,
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-
-            // 3. Cinematic Procedural Splash Screen
-            if (_showSplash)
-              Positioned.fill(
-                child: CinematicSplashScreen(
-                  onComplete: () {
-                    if (mounted) {
-                      setState(() {
-                        _showSplash = false;
-                        _lastElapsed = Duration.zero;
-                      });
-                    }
-                  },
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (didPop) return;
+        _handleBackNavigation();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Listener(
+          // High-precision raw pointer arena bypassing standard GestureDetector theft
+          onPointerDown: (e) {
+            _controller.inputRouter.handlePointerDown(
+              event: e,
+              splitX: _controller.hemisphereState.rawSplitPixels,
+              onPointerDown: _controller.handleSidePointerDown,
+            );
+          },
+          onPointerMove: (e) {
+            _controller.inputRouter.handlePointerMove(
+              event: e,
+              splitX: _controller.hemisphereState.rawSplitPixels,
+              onPointerMove: _controller.handleSidePointerMove,
+            );
+          },
+          onPointerUp: (e) {
+            _controller.inputRouter.handlePointerUp(
+              event: e,
+              splitX: _controller.hemisphereState.rawSplitPixels,
+            );
+          },
+          onPointerCancel: (e) {
+            _controller.inputRouter.handlePointerCancel(
+              event: e,
+              splitX: _controller.hemisphereState.rawSplitPixels,
+            );
+          },
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 1. Master Canvas Render Pass (Isolated GPU Layer via RepaintBoundary)
+              RepaintBoundary(
+                child: CustomPaint(
+                  painter: MasterGamePainter(controller: _controller),
+                  size: Size.infinite,
                 ),
               ),
-          ],
+
+              // 2. Reactive UI Overlays Layer
+              ListenableBuilder(
+                listenable: _controller,
+                builder: (context, _) {
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Active HUD Pill
+                      if (_controller.state != GamePlayState.deathReceipt)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: TopHudPill(
+                            controller: _controller,
+                            onOpenLeaderboard: _openLeaderboard,
+                            onToggleSimulation: _showBatterySimulationSheet,
+                            onReturnToMenu: _controller.returnToMenu,
+                            onOpenSettings: _openSettings,
+                          ),
+                        ),
+
+                      // Dual Thumb Start Overlay (in attract mode)
+                      if (_controller.state == GamePlayState.attract)
+                        DualThumbStartOverlay(
+                          controller: _controller,
+                          onOpenSettings: _openSettings,
+                          onOpenLeaderboard: _openLeaderboard,
+                        ),
+
+                      // Countdown Sequence (3... 2... 1... GO!)
+                      if (_controller.state == GamePlayState.countdown)
+                        CountdownOverlay(controller: _controller),
+
+                      // Death Receipt Card (viral share autopsy modal)
+                      if (_controller.state == GamePlayState.deathReceipt &&
+                          _controller.latestAutopsy != null)
+                        Container(
+                          color: Colors.black.withOpacity(0.85),
+                          child: DeathReceiptOverlay(
+                            autopsy: _controller.latestAutopsy!,
+                            controller: _controller,
+                            onRetry: _controller.triggerStartCountdown,
+                            onReturnToMenu: _controller.returnToMenu,
+                            onOpenLeaderboard: _openLeaderboard,
+                            onOpenSettings: _openSettings,
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+
+              // 3. Cinematic Procedural Splash Screen
+              if (_showSplash)
+                Positioned.fill(
+                  child: CinematicSplashScreen(
+                    onComplete: () {
+                      if (mounted) {
+                        setState(() {
+                          _showSplash = false;
+                          _lastElapsed = Duration.zero;
+                        });
+                      }
+                    },
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

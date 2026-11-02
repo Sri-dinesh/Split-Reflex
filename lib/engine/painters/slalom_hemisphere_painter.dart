@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 import '../entities/slalom_drift_entity.dart';
 
@@ -23,7 +24,10 @@ class SlalomHemispherePainter {
   }) {
     final double introFactor = (survivalTime / 3.5).clamp(0.0, 1.0);
     final double laneWidth = laneRight - laneLeft;
-    final double chasmWidth = glider.getChasmWidth(laneWidth, introFactor: introFactor);
+    final double chasmWidth = glider.getChasmWidth(
+      laneWidth,
+      introFactor: introFactor,
+    );
 
     // 1. Draw Undulating Chasm Boundary Ribbon
     _leftWallPath.reset();
@@ -32,7 +36,12 @@ class SlalomHemispherePainter {
     const double stepY = 24.0;
     bool first = true;
     for (double y = 0; y <= size.height + stepY; y += stepY) {
-      final double center = glider.getChasmCenter(y, laneLeft, laneRight, introFactor: introFactor);
+      final double center = glider.getChasmCenter(
+        y,
+        laneLeft,
+        laneRight,
+        introFactor: introFactor,
+      );
       final double lx = center - chasmWidth * 0.5;
       final double rx = center + chasmWidth * 0.5;
 
@@ -71,7 +80,7 @@ class SlalomHemispherePainter {
     _shipPath.reset();
     _shipPath.moveTo(0, -16.0); // nose
     _shipPath.lineTo(12.0, 14.0); // right wing
-    _shipPath.lineTo(0, 8.0);     // center notch
+    _shipPath.lineTo(0, 8.0); // center notch
     _shipPath.lineTo(-12.0, 14.0); // left wing
     _shipPath.close();
 

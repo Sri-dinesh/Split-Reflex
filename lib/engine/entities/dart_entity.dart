@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui';
+
 import '../../core/constants/physics_constants.dart';
 
 class DartHitboxCircle {
@@ -25,7 +26,11 @@ class DartEntity {
     targetRailY = initialRailY;
   }
 
-  void handleTap(double tapX, {required double laneLeft, required double laneRight}) {
+  void handleTap(
+    double tapX, {
+    required double laneLeft,
+    required double laneRight,
+  }) {
     const double margin = 18.0;
     final double minX = laneLeft + margin;
     final double maxX = laneRight - margin;
@@ -36,7 +41,12 @@ class DartEntity {
     }
   }
 
-  void handleDragDelta(double deltaX, {double? currentX, required double laneLeft, required double laneRight}) {
+  void handleDragDelta(
+    double deltaX, {
+    double? currentX,
+    required double laneLeft,
+    required double laneRight,
+  }) {
     const double margin = 18.0;
     final double minX = laneLeft + margin;
     final double maxX = laneRight - margin;
@@ -45,7 +55,8 @@ class DartEntity {
     } else if (currentX != null) {
       targetX = currentX.clamp(minX, maxX);
     } else {
-      targetX = (targetX + deltaX * PhysicsConstants.dartTouchSensitivity).clamp(minX, maxX);
+      targetX = (targetX + deltaX * PhysicsConstants.dartTouchSensitivity)
+          .clamp(minX, maxX);
     }
   }
 
@@ -67,20 +78,27 @@ class DartEntity {
     }
 
     // Smooth horizontal tracking via exponential decay (higher rate in gyro for zero latency)
-    final double trackingSpeed = isGyro ? 38.0 : PhysicsConstants.dartTrackingSpeed;
+    final double trackingSpeed = isGyro
+        ? 38.0
+        : PhysicsConstants.dartTrackingSpeed;
     final double prevX = x;
     final double lerpFactor = 1.0 - math.exp(-trackingSpeed * dt);
     x = lerpDouble(x, targetX, lerpFactor) ?? targetX;
     vx = dt > 0 ? (x - prevX) / dt : 0.0;
 
     // Banking tilt
-    bankAngle = (vx * 0.0012).clamp(-PhysicsConstants.dartBankAngleClamp, PhysicsConstants.dartBankAngleClamp);
+    bankAngle = (vx * 0.0012).clamp(
+      -PhysicsConstants.dartBankAngleClamp,
+      PhysicsConstants.dartBankAngleClamp,
+    );
 
     // Rail Y position smooth interpolation (normal: 0.85H, inverted: 0.15H)
     targetRailY = inverted
         ? screenHeight * PhysicsConstants.dartInvertedRailYFactor
         : screenHeight * PhysicsConstants.dartDefaultRailYFactor;
-    railY = lerpDouble(railY, targetRailY, 1.0 - math.exp(-12.0 * dt)) ?? targetRailY;
+    railY =
+        lerpDouble(railY, targetRailY, 1.0 - math.exp(-12.0 * dt)) ??
+        targetRailY;
   }
 
   /// 3 sample collision circles representing the Dart's geometry
@@ -88,8 +106,14 @@ class DartEntity {
     final double dir = inverted ? -1.0 : 1.0;
     return [
       DartHitboxCircle(offset: Offset(x, railY - 13.0 * dir), radius: 4.0),
-      DartHitboxCircle(offset: Offset(x - 9.0, railY + 10.0 * dir), radius: 6.0),
-      DartHitboxCircle(offset: Offset(x + 9.0, railY + 10.0 * dir), radius: 6.0),
+      DartHitboxCircle(
+        offset: Offset(x - 9.0, railY + 10.0 * dir),
+        radius: 6.0,
+      ),
+      DartHitboxCircle(
+        offset: Offset(x + 9.0, railY + 10.0 * dir),
+        radius: 6.0,
+      ),
     ];
   }
 

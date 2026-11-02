@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 import '../entities/shield_ping_entity.dart';
 
@@ -24,7 +25,11 @@ class ShieldHemispherePainter {
     _strokePaint
       ..color = fgColor.withOpacity(0.35)
       ..strokeWidth = 2.0;
-    canvas.drawLine(Offset(laneLeft + 10.0, shield.y), Offset(laneRight - 10.0, shield.y), _strokePaint);
+    canvas.drawLine(
+      Offset(laneLeft + 10.0, shield.y),
+      Offset(laneRight - 10.0, shield.y),
+      _strokePaint,
+    );
 
     // 2. Plasma Bolts
     for (final bolt in bolts) {
@@ -34,7 +39,11 @@ class ShieldHemispherePainter {
       _strokePaint
         ..color = SplitPalette.hazardCrimson.withOpacity(0.5)
         ..strokeWidth = 3.0;
-      canvas.drawLine(Offset(midX, bolt.y - 18.0), Offset(midX, bolt.y), _strokePaint);
+      canvas.drawLine(
+        Offset(midX, bolt.y - 18.0),
+        Offset(midX, bolt.y),
+        _strokePaint,
+      );
 
       // Bolt plasma head
       _fillPaint.color = Colors.white;
@@ -45,14 +54,23 @@ class ShieldHemispherePainter {
 
     // 3. Shield Barrier and Deflection Shockwave
     final double shieldWidth = (laneWidth * 0.70).clamp(40.0, 140.0);
-    final Rect shieldRect = Rect.fromCenter(center: Offset(midX, shield.y), width: shieldWidth, height: 10.0);
-    _fillPaint.color = isOverdrive ? SplitPalette.goldBright : SplitPalette.nearMissCyan;
-    canvas.drawRRect(RRect.fromRectAndRadius(shieldRect, const Radius.circular(5.0)), _fillPaint);
+    final Rect shieldRect = Rect.fromCenter(
+      center: Offset(midX, shield.y),
+      width: shieldWidth,
+      height: 10.0,
+    );
+    _fillPaint.color = isOverdrive
+        ? SplitPalette.goldBright
+        : SplitPalette.nearMissCyan;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(shieldRect, const Radius.circular(5.0)),
+      _fillPaint,
+    );
 
     if (shield.shieldPulse > 0.0) {
       final double ringRadius = 15.0 + (1.0 - shield.shieldPulse) * 45.0;
       _strokePaint
-        ..color = SplitPalette.nearMissCyan.withOpacity(shield.shieldPulse)
+        ..color = SplitPalette.nearMissCyan.withOpacity(shield.shieldPulse,)
         ..strokeWidth = 3.0 * shield.shieldPulse;
       canvas.drawCircle(Offset(midX, shield.y), ringRadius, _strokePaint);
     }
@@ -71,6 +89,9 @@ class ShieldHemispherePainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(canvas, Offset(laneLeft + (laneWidth - tp.width) / 2, size.height - 35));
+    tp.paint(
+      canvas,
+      Offset(laneLeft + (laneWidth - tp.width) / 2, size.height - 35),
+    );
   }
 }

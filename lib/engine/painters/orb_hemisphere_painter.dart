@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 import '../../core/constants/physics_constants.dart';
 import '../entities/obstacle_entity.dart';

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 /// Pre-allocated struct for zero heap allocations during high-frequency particle emission.
@@ -72,7 +73,8 @@ class ParticlePool {
       final p = particles[i];
       if (p.active) continue;
 
-      final double angle = baseAngle + (_rng.nextDouble() * spreadAngle - spreadAngle / 2);
+      final double angle =
+          baseAngle + (_rng.nextDouble() * spreadAngle - spreadAngle / 2);
       final double spd = speed * (0.4 + _rng.nextDouble() * 0.8);
 
       p.active = true;

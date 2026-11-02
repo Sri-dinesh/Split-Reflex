@@ -5,18 +5,18 @@ class PhysicsConstants {
   // Orb Mechanic
   static const double orbRadius = 14.0;
   static const double orbDefaultGravity = 980.0; // px/s²
-  static const double orbJumpImpulse = -360.0;   // px/s
-  static const double orbHorizontalSpeed = 130.0;// px/s
+  static const double orbJumpImpulse = -360.0; // px/s
+  static const double orbHorizontalSpeed = 130.0; // px/s
   static const int orbTrailLength = 12;
-  static const double orbSquashDuration = 0.12;  // 120ms
+  static const double orbSquashDuration = 0.12; // 120ms
 
   // Dart Mechanic
   static const double dartWidth = 28.0;
   static const double dartHeight = 34.0;
   static const double dartDefaultRailYFactor = 0.85; // 85% of screen height
   static const double dartInvertedRailYFactor = 0.15; // 15% of screen height
-  static const double dartTrackingSpeed = 28.0;      // Lerp exponential rate
-  static const double dartBankAngleClamp = 0.40;     // radians
+  static const double dartTrackingSpeed = 28.0; // Lerp exponential rate
+  static const double dartBankAngleClamp = 0.40; // radians
   static const double dartTouchSensitivity = 1.25;
 
   // Obstacle Specifications - Laser Gates

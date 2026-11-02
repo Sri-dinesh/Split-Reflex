@@ -56,12 +56,10 @@
 # Vibration Plugin
 -keep class com.benjaminabel.vibration.** { *; }
 
-# Supabase / HTTP / WebSockets client models
--dontwarn okhttp3.**
--dontwarn okio.**
+# Kotlin metadata / stdlib
 -dontwarn javax.annotation.**
--dontwarn kotlin.**
+-dontwarn kotlinx.**
+-keepclassmembers class kotlin.Metadata { public <methods>; }
 
-# Optimize and remove unused code aggressively
--repackageclasses ''
--allowaccessmodification
+# NOTE: do not add -repackageclasses here. Repackaging Flutter's embedding
+# classes breaks the JNI lookup of io.flutter.* on some devices.

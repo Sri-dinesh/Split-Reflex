@@ -2,10 +2,12 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../../core/services/haptic_choreographer.dart';
 import '../../core/services/procedural_audio_synth.dart';
 import '../../engine/game_controller.dart';
@@ -38,29 +40,62 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
 
   Future<void> _shareReceipt() async {
     if (_isSharing) return;
+    final box = context.findRenderObject() as RenderBox?;
     setState(() => _isSharing = true);
 
     try {
-      final boundary = _receiptBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary =
+          _receiptBoundaryKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) return;
 
       final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final ByteData? byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       if (byteData == null) return;
 
       final Uint8List pngBytes = byteData.buffer.asUint8List();
       final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/split_reflex_autopsy_${DateTime.now().millisecondsSinceEpoch}.png');
-      await file.writeAsBytes(pngBytes);
+      await _pruneOldReceipts(tempDir);
+      final file = File(
+        '${tempDir.path}/split_reflex_autopsy_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(pngBytes, flush: true);
 
       await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'My reflexes short-circuited in ${widget.autopsy.survivalTime.toStringAsFixed(2)}s at ${widget.autopsy.batteryPct}% battery on Split Reflex. Can you beat ${widget.autopsy.finalScore} pts?',
+        [XFile(file.path, mimeType: 'image/png')],
+        subject: 'Split Reflex death receipt',
+        text:
+            'My reflexes short-circuited in ${widget.autopsy.survivalTime.toStringAsFixed(2)}s at ${widget.autopsy.batteryPct}% battery on Split Reflex. Can you beat ${widget.autopsy.finalScore} pts?',
+        sharePositionOrigin: box != null && box.hasSize
+            ? box.localToGlobal(Offset.zero) & box.size
+            : null,
       );
     } catch (e) {
       debugPrint('Share failed: $e');
     } finally {
       if (mounted) setState(() => _isSharing = false);
+    }
+  }
+
+  /// Deletes receipt PNGs left behind by earlier shares so the cache does not
+  /// grow without bound. Best-effort: failures are ignored.
+  Future<void> _pruneOldReceipts(Directory tempDir) async {
+    try {
+      final cutoff = DateTime.now().subtract(const Duration(hours: 1));
+      await for (final entity in tempDir.list()) {
+        if (entity is! File) continue;
+        final name = entity.uri.pathSegments.last;
+        if (!name.startsWith('split_reflex_autopsy_')) continue;
+        if (!name.endsWith('.png')) continue;
+        final stat = await entity.stat();
+        if (stat.modified.isBefore(cutoff)) {
+          await entity.delete();
+        }
+      }
+    } catch (e) {
+      debugPrint('Receipt cache prune failed: $e');
     }
   }
 
@@ -90,11 +125,15 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
               child: ClipPath(
                 clipper: SawtoothReceiptClipper(sawtoothSize: 7.0),
                 child: Container(
-                  width: math.min(360.0, MediaQuery.of(context).size.width - 48.0),
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF9F9F9),
+                  width: math.min(
+                    360.0,
+                    MediaQuery.of(context).size.width - 48.0,
                   ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 28.0,
+                  ),
+                  decoration: const BoxDecoration(color: Color(0xFFF9F9F9)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -194,7 +233,10 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                       ),
                       const SizedBox(height: 4.0),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10.0,
+                          vertical: 8.0,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF111111),
                           borderRadius: BorderRadius.circular(4.0),
@@ -217,13 +259,18 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                         children: [
                           Expanded(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 5.0),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8.0,
+                                vertical: 5.0,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEEEEEE),
                                 borderRadius: BorderRadius.circular(4.0),
                               ),
                               child: Text(
-                                autopsy.sessionMode == GameSessionMode.duoCoop ? 'Duo Co-Op' : 'Solo Run',
+                                autopsy.sessionMode == GameSessionMode.duoCoop
+                                    ? 'Duo Co-Op'
+                                    : 'Solo Run',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: Color(0xFF333333),
@@ -236,13 +283,18 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                           const SizedBox(width: 8.0),
                           Expanded(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 5.0),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8.0,
+                                vertical: 5.0,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEEEEEE),
                                 borderRadius: BorderRadius.circular(4.0),
                               ),
                               child: Text(
-                                autopsy.playMode == PlayHandMode.oneHand ? '1-Hand Survival' : '2-Hands Strict',
+                                autopsy.playMode == PlayHandMode.oneHand
+                                    ? '1-Hand Survival'
+                                    : '2-Hands Strict',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: Color(0xFF333333),
@@ -259,15 +311,25 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                       if (autopsy.sessionMode == GameSessionMode.duoCoop) ...[
                         const SizedBox(height: 8.0),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 6.0,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFEBEE),
-                            border: Border.all(color: const Color(0xFFD32F2F), width: 1.0),
+                            border: Border.all(
+                              color: const Color(0xFFD32F2F),
+                              width: 1.0,
+                            ),
                             borderRadius: BorderRadius.circular(4.0),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.warning_amber_rounded, size: 14, color: Color(0xFFD32F2F)),
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                size: 14,
+                                color: Color(0xFFD32F2F),
+                              ),
                               const SizedBox(width: 6.0),
                               Expanded(
                                 child: Text(
@@ -291,7 +353,11 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                         padding: const EdgeInsets.all(8.0),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: isGod ? const Color(0xFFD4AF37) : (autopsy.wasOverdrive ? const Color(0xFFFF1E42) : Colors.black26),
+                            color: isGod
+                                ? const Color(0xFFD4AF37)
+                                : (autopsy.wasOverdrive
+                                      ? const Color(0xFFFF1E42)
+                                      : Colors.black26),
                             width: 1.2,
                           ),
                           borderRadius: BorderRadius.circular(4.0),
@@ -302,11 +368,15 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                             Text(
                               isGod
                                   ? '★ 1% God Mode Verified (10.0x)'
-                                  : (autopsy.wasOverdrive ? '⚡ Overdrive Verified (3.0x)' : 'Standard Protocol (1.0x)'),
+                                  : (autopsy.wasOverdrive
+                                        ? '⚡ Overdrive Verified (3.0x)'
+                                        : 'Standard Protocol (1.0x)'),
                               style: TextStyle(
                                 color: isGod
                                     ? const Color(0xFFB8860B)
-                                    : (autopsy.wasOverdrive ? const Color(0xFFFF1E42) : const Color(0xFF222222)),
+                                    : (autopsy.wasOverdrive
+                                          ? const Color(0xFFFF1E42)
+                                          : const Color(0xFF222222)),
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -389,20 +459,28 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                   // Play Again Button (Primary CTA)
                   ElevatedButton.icon(
                     onPressed: () {
-                      ProceduralAudioSynth.instance.playSwapTick(isFinal: false);
+                      ProceduralAudioSynth.instance.playSwapTick(
+                        isFinal: false,
+                      );
                       HapticChoreographer.instance.triggerTap();
                       widget.onRetry();
                     },
                     icon: const Icon(Icons.refresh_rounded, size: 20),
                     label: const Text(
                       'Play Again',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 14.0),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.0)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14.0),
+                      ),
                       elevation: 4.0,
                     ),
                   ),
@@ -419,14 +497,22 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                           icon: const Icon(Icons.share_rounded, size: 16),
                           label: Text(
                             _isSharing ? 'Exporting...' : 'Share',
-                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
                           ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white24, width: 1.0),
-                            backgroundColor: Colors.white.withOpacity(0.04),
+                            side: const BorderSide(
+                              color: Colors.white24,
+                              width: 1.0,
+                            ),
+                            backgroundColor: Colors.white.withOpacity(0.04,),
                             padding: const EdgeInsets.symmetric(vertical: 12.0),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
                           ),
                         ),
                       ),
@@ -447,14 +533,22 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                           icon: const Icon(Icons.tune_rounded, size: 16),
                           label: const Text(
                             'Settings',
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
                           ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white24, width: 1.0),
-                            backgroundColor: Colors.white.withOpacity(0.04),
+                            side: const BorderSide(
+                              color: Colors.white24,
+                              width: 1.0,
+                            ),
+                            backgroundColor: Colors.white.withOpacity(0.04,),
                             padding: const EdgeInsets.symmetric(vertical: 12.0),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
                           ),
                         ),
                       ),
@@ -476,9 +570,16 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.06),
                               borderRadius: BorderRadius.circular(12.0),
-                              border: Border.all(color: Colors.white24, width: 1.0),
+                              border: Border.all(
+                                color: Colors.white24,
+                                width: 1.0,
+                              ),
                             ),
-                            child: const Icon(Icons.home_rounded, color: Colors.white70, size: 20),
+                            child: const Icon(
+                              Icons.home_rounded,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
                           ),
                         ),
                     ],
@@ -497,12 +598,17 @@ class _DeathReceiptOverlayState extends State<DeathReceiptOverlay> {
       builder: (context, constraints) {
         const double dashWidth = 5.0;
         const double dashSpace = 3.0;
-        final int count = (constraints.maxWidth / (dashWidth + dashSpace)).floor();
+        final int count = (constraints.maxWidth / (dashWidth + dashSpace))
+            .floor();
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: List.generate(
             count,
-            (_) => Container(width: dashWidth, height: 1.0, color: const Color(0xFFD0D0D0)),
+            (_) => Container(
+              width: dashWidth,
+              height: 1.0,
+              color: const Color(0xFFD0D0D0),
+            ),
           ),
         );
       },
@@ -580,7 +686,8 @@ class SparklinePainter extends CustomPainter {
     final Path leftPath = Path();
     for (int i = 0; i < leftActivity.length; i++) {
       final double x = i * stepX;
-      final double y = size.height - (leftActivity[i] / maxVal) * (size.height - 8) - 4;
+      final double y =
+          size.height - (leftActivity[i] / maxVal) * (size.height - 8) - 4;
       if (i == 0) {
         leftPath.moveTo(x, y);
       } else {
@@ -598,7 +705,8 @@ class SparklinePainter extends CustomPainter {
     final Path rightPath = Path();
     for (int i = 0; i < rightActivity.length; i++) {
       final double x = i * stepX;
-      final double y = size.height - (rightActivity[i] / maxVal) * (size.height - 8) - 4;
+      final double y =
+          size.height - (rightActivity[i] / maxVal) * (size.height - 8) - 4;
       if (i == 0) {
         rightPath.moveTo(x, y);
       } else {
@@ -620,10 +728,39 @@ class BarcodePainter extends CustomPainter {
       ..color = const Color(0xFF111111)
       ..style = PaintingStyle.fill;
 
-    const List<int> pattern = [2, 1, 3, 1, 1, 4, 2, 1, 3, 2, 1, 2, 3, 1, 4, 1, 2, 3, 1, 1, 2, 4, 2, 1, 3];
+    const List<int> pattern = [
+      2,
+      1,
+      3,
+      1,
+      1,
+      4,
+      2,
+      1,
+      3,
+      2,
+      1,
+      2,
+      3,
+      1,
+      4,
+      1,
+      2,
+      3,
+      1,
+      1,
+      2,
+      4,
+      2,
+      1,
+      3,
+    ];
     double curX = 10.0;
     for (final width in pattern) {
-      canvas.drawRect(Rect.fromLTWH(curX, 0, width.toDouble() * 1.5, size.height), barPaint);
+      canvas.drawRect(
+        Rect.fromLTWH(curX, 0, width.toDouble() * 1.5, size.height),
+        barPaint,
+      );
       curX += (width * 1.5) + 3.0;
       if (curX >= size.width - 10) break;
     }

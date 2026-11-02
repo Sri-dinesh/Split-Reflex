@@ -1,10 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Essential Game Permissions -->
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.INTERNET" />
+    <!--
+      Split Reflex is a fully offline game: no accounts, no analytics, no ads,
+      no remote leaderboard. The only declared permission is vibration.
 
-    <!-- Hardware Feature Requirements (gyroscope & accelerometer marked optional for maximum device coverage) -->
+      Do NOT add android.permission.INTERNET here. If a future feature needs
+      network access, add it deliberately together with a Play Console Data
+      Safety review.
+    -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Hardware feature requirements (sensors optional for maximum device coverage) -->
     <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="true" />
@@ -13,12 +19,17 @@
         android:label="Split Reflex"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:isGame="true"
         android:appCategory="game"
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/data_extraction_rules"
-        android:hardwareAccelerated="true">
+        android:hardwareAccelerated="true"
+        android:usesCleartextTraffic="false"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:forceDarkAllowed="false"
+        android:enableOnBackInvokedCallback="true">
 
         <meta-data android:name="android.max_aspect" android:value="2.5" />
 
@@ -32,10 +43,7 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
-            <!-- Specifies an Android theme to apply to this Activity as soon as
-                 the Android process has started. This theme is visible to the user
-                 while the Flutter UI initializes. After that, this theme continues
-                 to determine the Window background behind the Flutter UI. -->
+            <!-- Theme applied while the Flutter UI initializes. -->
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"

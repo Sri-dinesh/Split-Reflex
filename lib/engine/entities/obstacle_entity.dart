@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../../core/constants/physics_constants.dart';
 import '../../core/utils/math_utils.dart';
 
@@ -43,7 +45,10 @@ class LaserGate {
     } else {
       // Clamp gap within lane
       final double half = gapWidth / 2.0;
-      gapCenterX = gapCenterX.clamp(laneLeft + half + 8.0, laneRight - half - 8.0);
+      gapCenterX = gapCenterX.clamp(
+        laneLeft + half + 8.0,
+        laneRight - half - 8.0,
+      );
     }
   }
 
@@ -97,10 +102,7 @@ class Monolith {
 
   Rect get rect => Rect.fromLTWH(x - width / 2.0, y, width, height);
 
-  void update({
-    required double dt,
-    required bool inverted,
-  }) {
+  void update({required double dt, required bool inverted}) {
     final double dirY = inverted ? -1.0 : 1.0;
     y += dirY * speed * dt;
   }
@@ -118,12 +120,23 @@ class Monolith {
       final Offset center = circle.offset;
       final double radius = circle.radius;
 
-      if (MathUtils.circleIntersectsAABB(cx: center.dx, cy: center.dy, radius: radius, aabb: aabb)) {
+      if (MathUtils.circleIntersectsAABB(
+        cx: center.dx,
+        cy: center.dy,
+        radius: radius,
+        aabb: aabb,
+      )) {
         collided = true;
         break;
       }
 
-      final double d = MathUtils.distanceCircleToAABB(cx: center.dx, cy: center.dy, aabb: aabb) - radius;
+      final double d =
+          MathUtils.distanceCircleToAABB(
+            cx: center.dx,
+            cy: center.dy,
+            aabb: aabb,
+          ) -
+          radius;
       if (d < minDistance) {
         minDistance = d;
       }
@@ -131,7 +144,8 @@ class Monolith {
 
     if (collided) return true;
 
-    if (!nearMissTriggered && minDistance <= PhysicsConstants.nearMissDistanceThreshold) {
+    if (!nearMissTriggered &&
+        minDistance <= PhysicsConstants.nearMissDistanceThreshold) {
       nearMissTriggered = true;
       onNearMiss();
     }

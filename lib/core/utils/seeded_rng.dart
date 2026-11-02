@@ -2,7 +2,8 @@
 class SeededRng {
   int _state;
 
-  SeededRng([int? seed]) : _state = seed ?? DateTime.now().microsecondsSinceEpoch;
+  SeededRng([int? seed])
+    : _state = seed ?? DateTime.now().microsecondsSinceEpoch;
 
   /// Returns random double in range [0.0, 1.0)
   double nextDouble() {

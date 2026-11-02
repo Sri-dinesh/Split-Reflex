@@ -1,8 +1,12 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// A single completed run.
+///
+/// All fields are gameplay telemetry generated on-device. No identifiers,
+/// location, contacts or advertising data are ever stored.
 class ScoreEntry {
   final String id;
   final String playerHandle;
@@ -40,19 +44,26 @@ class ScoreEntry {
   factory ScoreEntry.fromMap(Map<String, dynamic> map) {
     return ScoreEntry(
       id: map['id']?.toString() ?? '',
-      playerHandle: map['player_handle']?.toString() ?? 'ANON',
+      playerHandle: map['player_handle']?.toString() ?? 'PILOT',
       score: (map['score'] as num?)?.toInt() ?? 0,
       survivalMs: (map['survival_ms'] as num?)?.toInt() ?? 0,
       batteryPct: (map['battery_pct'] as num?)?.toInt() ?? 100,
       wasOverdrive: map['was_overdrive'] == true,
-      failedHemisphere: map['failed_hemisphere']?.toString() ?? 'LEFT',
-      createdAt: map['created_at'] != null
-          ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()
-          : DateTime.now(),
+      failedHemisphere: map['failed_hemisphere']?.toString() == 'RIGHT'
+          ? 'RIGHT'
+          : 'LEFT',
+      createdAt:
+          DateTime.tryParse(map['created_at']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 }
 
+/// On-device run history and high score store.
+///
+/// Split Reflex intentionally has **no remote leaderboard**. Keeping the
+/// leaderboard local means the app needs no network permission, collects no
+/// user data, and stays outside Google Play's user-generated-content policy.
 class LeaderboardService {
   static final LeaderboardService instance = LeaderboardService._internal();
   LeaderboardService._internal();
@@ -61,132 +72,152 @@ class LeaderboardService {
   static const String _localHighScoreKey = 'split_brain_high_score';
   static const String _playerHandleKey = 'split_brain_player_handle';
 
-  bool _supabaseInitialized = false;
+  /// Hard cap so a long-lived install cannot grow prefs without bound.
+  static const int maxStoredScores = 200;
 
-  Future<void> init({String? supabaseUrl, String? supabaseAnonKey}) async {
-    if (supabaseUrl != null && supabaseAnonKey != null && supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
-      try {
-        await Supabase.initialize(
-          url: supabaseUrl,
-          anonKey: supabaseAnonKey, // ignore: deprecated_member_use
-        );
-        _supabaseInitialized = true;
-      } catch (e) {
-        debugPrint('Supabase init skipped or offline: $e');
-        _supabaseInitialized = false;
-      }
-    }
+  /// Maximum length of a callsign, matching the UI input limit.
+  static const int maxHandleLength = 14;
+
+  bool _initialized = false;
+
+  /// Kept for source compatibility with earlier builds; the store is local and
+  /// therefore needs no credentials or network handshake.
+  Future<void> init() async {
+    if (_initialized) return;
+    _initialized = true;
+  }
+
+  /// Normalises a user-entered callsign: strips control characters, collapses
+  /// whitespace, upper-cases it and clamps the length.
+  static String sanitizeHandle(String? raw) {
+    final String cleaned = (raw ?? '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'[\u0000-\u001F\u007F-\u009F]'), '')
+        .trim()
+        .toUpperCase();
+    if (cleaned.isEmpty) return 'PILOT';
+    return cleaned.length > maxHandleLength
+        ? cleaned.substring(0, maxHandleLength).trim()
+        : cleaned;
   }
 
   Future<String> getPlayerHandle() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_playerHandleKey) ?? 'PILOT';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return sanitizeHandle(prefs.getString(_playerHandleKey));
+    } catch (_) {
+      return 'PILOT';
+    }
   }
 
   Future<void> savePlayerHandle(String handle) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_playerHandleKey, handle.trim());
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_playerHandleKey, sanitizeHandle(handle));
+    } catch (error) {
+      debugPrint('Failed to persist player handle: $error');
+    }
   }
 
   Future<int> getLocalHighScore() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_localHighScoreKey) ?? 0;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt(_localHighScoreKey) ?? 0;
+    } catch (_) {
+      return 0;
+    }
   }
 
   Future<void> clearLocalScores() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_localScoresKey);
-    await prefs.remove(_localHighScoreKey);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_localScoresKey);
+      await prefs.remove(_localHighScoreKey);
+    } catch (error) {
+      debugPrint('Failed to clear local scores: $error');
+    }
+  }
+
+  /// Removes every piece of data the app has written (scores + callsign).
+  Future<void> clearAllUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_localScoresKey);
+      await prefs.remove(_localHighScoreKey);
+      await prefs.remove(_playerHandleKey);
+    } catch (error) {
+      debugPrint('Failed to clear user data: $error');
+    }
   }
 
   Future<void> recordScore(ScoreEntry entry) async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentHigh = prefs.getInt(_localHighScoreKey) ?? 0;
-    if (entry.score > currentHigh) {
-      await prefs.setInt(_localHighScoreKey, entry.score);
+    // Reject nonsense telemetry rather than persisting it.
+    if (entry.score < 0 ||
+        entry.survivalMs < 0 ||
+        entry.survivalMs > 86400000) {
+      debugPrint('Discarding invalid score entry');
+      return;
     }
 
-    // Save to local scores cache
-    final rawList = prefs.getStringList(_localScoresKey) ?? [];
-    final jsonStr = jsonEncode(entry.toMap());
-    rawList.add(jsonStr);
-    await prefs.setStringList(_localScoresKey, rawList);
-
-    // If Supabase is connected, submit online
-    if (_supabaseInitialized) {
-      try {
-        await Supabase.instance.client.from('scores').insert({
-          'player_handle': entry.playerHandle,
-          'score': entry.score,
-          'survival_ms': entry.survivalMs,
-          'battery_pct': entry.batteryPct,
-          'was_overdrive': entry.wasOverdrive,
-          'failed_hemisphere': entry.failedHemisphere,
-        });
-      } catch (e) {
-        debugPrint('Failed to submit score to Supabase: $e');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final int currentHigh = prefs.getInt(_localHighScoreKey) ?? 0;
+      if (entry.score > currentHigh) {
+        await prefs.setInt(_localHighScoreKey, entry.score);
       }
+
+      final List<String> rawList =
+          prefs.getStringList(_localScoresKey) ?? <String>[];
+      rawList.add(jsonEncode(entry.toMap()));
+
+      // Keep only the newest [maxStoredScores] runs.
+      final List<String> trimmed = rawList.length > maxStoredScores
+          ? rawList.sublist(rawList.length - maxStoredScores)
+          : rawList;
+
+      await prefs.setStringList(_localScoresKey, trimmed);
+    } catch (error) {
+      debugPrint('Failed to record score: $error');
     }
   }
 
-  Future<List<ScoreEntry>> fetchGlobalTopScores() async {
-    if (_supabaseInitialized) {
-      try {
-        final response = await Supabase.instance.client
-            .from('scores')
-            .select()
-            .order('score', ascending: false)
-            .limit(100);
-
-        final list = (response as List).map((row) => ScoreEntry.fromMap(row as Map<String, dynamic>)).toList();
-        if (list.isNotEmpty) return list;
-      } catch (e) {
-        debugPrint('Failed to fetch from Supabase: $e');
-      }
-    }
-
-    // Fallback: local scores only (0 dummy/fake entries)
+  /// Top runs stored on this device. There is no remote source to merge with.
+  Future<List<ScoreEntry>> fetchGlobalTopScores() {
     return _getLocalScores(filterOnePercentClub: false);
   }
 
-  Future<List<ScoreEntry>> fetchOnePercentClubScores() async {
-    if (_supabaseInitialized) {
-      try {
-        final response = await Supabase.instance.client
-            .from('scores')
-            .select()
-            .eq('battery_pct', 1)
-            .eq('was_overdrive', true)
-            .order('score', ascending: false)
-            .limit(100);
-
-        final list = (response as List).map((row) => ScoreEntry.fromMap(row as Map<String, dynamic>)).toList();
-        if (list.isNotEmpty) return list;
-      } catch (e) {
-        debugPrint('Failed to fetch 1% club from Supabase: $e');
-      }
-    }
-
-    // Fallback: local scores only (0 dummy/fake entries)
+  /// Low-battery "1% club" runs stored on this device.
+  Future<List<ScoreEntry>> fetchOnePercentClubScores() {
     return _getLocalScores(filterOnePercentClub: true);
   }
 
-  Future<List<ScoreEntry>> _getLocalScores({required bool filterOnePercentClub}) async {
-    final prefs = await SharedPreferences.getInstance();
-    final rawList = prefs.getStringList(_localScoresKey) ?? [];
+  Future<List<ScoreEntry>> _getLocalScores({
+    required bool filterOnePercentClub,
+  }) async {
+    List<String> rawList;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      rawList = prefs.getStringList(_localScoresKey) ?? <String>[];
+    } catch (error) {
+      debugPrint('Failed to read local scores: $error');
+      return <ScoreEntry>[];
+    }
 
-    final List<ScoreEntry> entries = [];
-    for (final s in rawList) {
+    final List<ScoreEntry> entries = <ScoreEntry>[];
+    for (final String raw in rawList) {
       try {
-        final map = jsonDecode(s) as Map<String, dynamic>;
-        entries.add(ScoreEntry.fromMap(map));
-      } catch (_) {}
+        final Object? decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) {
+          entries.add(ScoreEntry.fromMap(decoded));
+        }
+      } catch (_) {
+        // Skip corrupt rows instead of failing the whole leaderboard.
+      }
     }
 
-    List<ScoreEntry> filtered = entries;
-    if (filterOnePercentClub) {
-      filtered = entries.where((e) => e.batteryPct <= 1 && e.wasOverdrive).toList();
-    }
+    final List<ScoreEntry> filtered = filterOnePercentClub
+        ? entries.where((e) => e.batteryPct <= 1 && e.wasOverdrive).toList()
+        : entries;
 
     filtered.sort((a, b) => b.score.compareTo(a.score));
     return filtered;

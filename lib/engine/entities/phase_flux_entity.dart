@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 
 enum PolarityColor { cyan, crimson }
@@ -39,7 +41,9 @@ class PhaseCoreEntity {
   }
 
   void flip() {
-    polarity = polarity == PolarityColor.cyan ? PolarityColor.crimson : PolarityColor.cyan;
+    polarity = polarity == PolarityColor.cyan
+        ? PolarityColor.crimson
+        : PolarityColor.cyan;
     flipAnimProgress = 0.0;
   }
 
@@ -53,5 +57,7 @@ class PhaseCoreEntity {
     y = targetY;
   }
 
-  Color get currentColor => polarity == PolarityColor.cyan ? SplitPalette.nearMissCyan : SplitPalette.hazardCrimson;
+  Color get currentColor => polarity == PolarityColor.cyan
+      ? SplitPalette.nearMissCyan
+      : SplitPalette.hazardCrimson;
 }

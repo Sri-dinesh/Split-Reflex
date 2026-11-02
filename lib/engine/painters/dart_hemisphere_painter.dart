@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 import '../entities/dart_entity.dart';
 import '../entities/obstacle_entity.dart';
@@ -81,7 +82,9 @@ class DartHemispherePainter {
     required bool isOverdrive,
   }) {
     _monolithOuterPaint.color = fgColor;
-    _monolithWireframePaint.color = isOverdrive ? SplitPalette.hazardCrimson : bgColor;
+    _monolithWireframePaint.color = isOverdrive
+        ? SplitPalette.hazardCrimson
+        : bgColor;
     _monolithGuideLinePaint.color = fgColor.withOpacity(0.08);
 
     for (final m in monoliths) {
@@ -103,8 +106,16 @@ class DartHemispherePainter {
         canvas.drawRect(insetRect, _monolithWireframePaint);
 
         // X-Bracing lines
-        canvas.drawLine(insetRect.topLeft, insetRect.bottomRight, _monolithWireframePaint);
-        canvas.drawLine(insetRect.topRight, insetRect.bottomLeft, _monolithWireframePaint);
+        canvas.drawLine(
+          insetRect.topLeft,
+          insetRect.bottomRight,
+          _monolithWireframePaint,
+        );
+        canvas.drawLine(
+          insetRect.topRight,
+          insetRect.bottomLeft,
+          _monolithWireframePaint,
+        );
       }
     }
   }

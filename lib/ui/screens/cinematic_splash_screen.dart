@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 import '../../core/services/haptic_choreographer.dart';
 import '../../core/services/procedural_audio_synth.dart';
@@ -64,21 +66,28 @@ class _CinematicSplashScreenState extends State<CinematicSplashScreen>
     );
 
     // 4. Subtle Harmonic Kinetic Breathe (Scale 1.0 -> 1.035 -> 1.0)
-    _kineticBreatheAnimation = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.94, end: 1.035).chain(CurveTween(curve: Curves.easeOutCubic)),
-        weight: 55,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.035, end: 1.0).chain(CurveTween(curve: Curves.easeInOutSine)),
-        weight: 45,
-      ),
-    ]).animate(
-      CurvedAnimation(
-        parent: _animController,
-        curve: const Interval(0.0, 0.88),
-      ),
-    );
+    _kineticBreatheAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 0.94,
+              end: 1.035,
+            ).chain(CurveTween(curve: Curves.easeOutCubic)),
+            weight: 55,
+          ),
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 1.035,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.easeInOutSine)),
+            weight: 45,
+          ),
+        ]).animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.0, 0.88),
+          ),
+        );
 
     // 5. Staggered Title Reveal
     _titleOpacityAnimation = CurvedAnimation(
@@ -156,7 +165,10 @@ class _CinematicSplashScreenState extends State<CinematicSplashScreen>
       child: AnimatedBuilder(
         animation: _animController,
         builder: (context, _) {
-          final double exitOpacity = (1.0 - _exitFadeAnimation.value).clamp(0.0, 1.0);
+          final double exitOpacity = (1.0 - _exitFadeAnimation.value).clamp(
+            0.0,
+            1.0,
+          );
 
           return Opacity(
             opacity: exitOpacity,
@@ -174,14 +186,18 @@ class _CinematicSplashScreenState extends State<CinematicSplashScreen>
                         children: [
                           // Expanding Ambient Radial Aura behind emblem
                           Container(
-                            width: 160.0 * (0.6 + 0.4 * _energyBloomAnimation.value),
-                            height: 160.0 * (0.6 + 0.4 * _energyBloomAnimation.value),
+                            width:
+                                160.0 *
+                                (0.6 + 0.4 * _energyBloomAnimation.value),
+                            height:
+                                160.0 *
+                                (0.6 + 0.4 * _energyBloomAnimation.value),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: RadialGradient(
                                 colors: [
-                                  SplitPalette.nearMissCyan.withOpacity(0.28 * _energyBloomAnimation.value),
-                                  SplitPalette.hazardCrimson.withOpacity(0.18 * _energyBloomAnimation.value),
+                                  SplitPalette.nearMissCyan.withOpacity(0.28 * _energyBloomAnimation.value,),
+                                  SplitPalette.hazardCrimson.withOpacity(0.18 * _energyBloomAnimation.value,),
                                   Colors.transparent,
                                 ],
                                 stops: const [0.0, 0.48, 1.0],

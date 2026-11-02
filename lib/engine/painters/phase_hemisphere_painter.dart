@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 import '../entities/phase_flux_entity.dart';
 
@@ -24,22 +26,39 @@ class PhaseHemispherePainter {
     // 1. Draw descending Polarity Walls
     for (final wall in walls) {
       if (wall.absorbed) continue;
-      final Color wallColor = wall.color == PolarityColor.cyan ? SplitPalette.nearMissCyan : SplitPalette.hazardCrimson;
-      
+      final Color wallColor = wall.color == PolarityColor.cyan
+          ? SplitPalette.nearMissCyan
+          : SplitPalette.hazardCrimson;
+
       // Wall glowing bar
       _fillPaint.color = wallColor.withOpacity(0.35);
-      final Rect wallRect = Rect.fromLTWH(laneLeft + 6.0, wall.y, laneWidth - 12.0, wall.height);
-      canvas.drawRRect(RRect.fromRectAndRadius(wallRect, const Radius.circular(6.0)), _fillPaint);
+      final Rect wallRect = Rect.fromLTWH(
+        laneLeft + 6.0,
+        wall.y,
+        laneWidth - 12.0,
+        wall.height,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(wallRect, const Radius.circular(6.0)),
+        _fillPaint,
+      );
 
       // Bright accent border
       _strokePaint
         ..color = wallColor
         ..strokeWidth = 2.0;
-      canvas.drawRRect(RRect.fromRectAndRadius(wallRect, const Radius.circular(6.0)), _strokePaint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(wallRect, const Radius.circular(6.0)),
+        _strokePaint,
+      );
 
       // Icon / glyph in center
       _fillPaint.color = Colors.white;
-      canvas.drawCircle(Offset(laneLeft + laneWidth * 0.5, wall.y + wall.height * 0.5), 3.5, _fillPaint);
+      canvas.drawCircle(
+        Offset(laneLeft + laneWidth * 0.5, wall.y + wall.height * 0.5),
+        3.5,
+        _fillPaint,
+      );
     }
 
     // 2. Draw Phase Core
@@ -80,6 +99,9 @@ class PhaseHemispherePainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(canvas, Offset(laneLeft + (laneWidth - tp.width) / 2, size.height - 35));
+    tp.paint(
+      canvas,
+      Offset(laneLeft + (laneWidth - tp.width) / 2, size.height - 35),
+    );
   }
 }

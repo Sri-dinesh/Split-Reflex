@@ -49,7 +49,12 @@ class SlalomDriftEntity {
   }
 
   /// Calculates safe chasm center at vertical position testY with smooth startup runway
-  double getChasmCenter(double testY, double laneLeft, double laneRight, {double introFactor = 1.0}) {
+  double getChasmCenter(
+    double testY,
+    double laneLeft,
+    double laneRight, {
+    double introFactor = 1.0,
+  }) {
     final double laneWidth = laneRight - laneLeft;
     final double midX = (laneLeft + laneRight) / 2.0;
     // introFactor smoothly curves from 0.0 (straight highway) to 1.0 (winding chasm)

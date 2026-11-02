@@ -11,12 +11,10 @@ void main() {
   SharedPreferences.setMockInitialValues({});
   ProceduralAudioSynth.instance.soundEnabled = false;
 
-  testWidgets('SplitBrainApp mounts GameViewportScreen successfully', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: SplitBrainApp(),
-      ),
-    );
+  testWidgets('SplitBrainApp mounts GameViewportScreen successfully', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const ProviderScope(child: SplitBrainApp()));
 
     expect(find.byType(GameViewportScreen), findsOneWidget);
     expect(find.byType(CinematicSplashScreen), findsOneWidget);

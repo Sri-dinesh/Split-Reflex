@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 
 /// Highly detailed procedural vector illustration of the official Split Reflex emblem.
@@ -32,13 +33,13 @@ class SplitDiamondEmblem extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * 0.22),
         boxShadow: [
           BoxShadow(
-            color: SplitPalette.nearMissCyan.withOpacity(0.35 * glowIntensity),
+            color: SplitPalette.nearMissCyan.withOpacity(0.35 * glowIntensity,),
             blurRadius: size * 0.30,
             spreadRadius: 1.0,
             offset: Offset(-size * 0.06, 0),
           ),
           BoxShadow(
-            color: SplitPalette.hazardCrimson.withOpacity(0.35 * glowIntensity),
+            color: SplitPalette.hazardCrimson.withOpacity(0.35 * glowIntensity,),
             blurRadius: size * 0.30,
             spreadRadius: 1.0,
             offset: Offset(size * 0.06, 0),
@@ -91,11 +92,7 @@ class _DetailedSplitEmblemPainter extends CustomPainter {
       ..shader = RadialGradient(
         center: Alignment.center,
         radius: 0.85,
-        colors: const [
-          Color(0xFF1B1E2B),
-          Color(0xFF0F1118),
-          Color(0xFF07080C),
-        ],
+        colors: const [Color(0xFF1B1E2B), Color(0xFF0F1118), Color(0xFF07080C)],
         stops: const [0.0, 0.55, 1.0],
       ).createShader(outerRRect.outerRect);
     canvas.drawRRect(outerRRect, basePaint);
@@ -105,11 +102,7 @@ class _DetailedSplitEmblemPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          Color(0x6600F0FF),
-          Color(0x22FFFFFF),
-          Color(0x66FF1E42),
-        ],
+        colors: [Color(0x6600F0FF), Color(0x22FFFFFF), Color(0x66FF1E42)],
         stops: [0.0, 0.5, 1.0],
       ).createShader(outerRRect.outerRect)
       ..style = PaintingStyle.stroke
@@ -119,14 +112,22 @@ class _DetailedSplitEmblemPainter extends CustomPainter {
     // 2. Ambient Bilateral Bloom
     if (glowIntensity > 0.01) {
       final Paint cyanBloom = Paint()
-        ..color = SplitPalette.nearMissCyan.withOpacity(0.20 * glowIntensity)
+        ..color = SplitPalette.nearMissCyan.withOpacity(0.20 * glowIntensity,)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.18);
-      canvas.drawCircle(Offset(cx - w * 0.18, cy - h * 0.08), w * 0.22, cyanBloom);
+      canvas.drawCircle(
+        Offset(cx - w * 0.18, cy - h * 0.08),
+        w * 0.22,
+        cyanBloom,
+      );
 
       final Paint crimsonBloom = Paint()
-        ..color = SplitPalette.hazardCrimson.withOpacity(0.20 * glowIntensity)
+        ..color = SplitPalette.hazardCrimson.withOpacity(0.20 * glowIntensity,)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.18);
-      canvas.drawCircle(Offset(cx + w * 0.18, cy + h * 0.08), w * 0.22, crimsonBloom);
+      canvas.drawCircle(
+        Offset(cx + w * 0.18, cy + h * 0.08),
+        w * 0.22,
+        crimsonBloom,
+      );
     }
 
     // Docking animation separation offset
@@ -252,7 +253,8 @@ class _DetailedSplitEmblemPainter extends CustomPainter {
 
     // --- CENTRAL SINGULARITY SEAM ---
     if (dockProgress > 0.6 && seamIntensity > 0.01) {
-      final double seamAlpha = ((dockProgress - 0.6) / 0.4 * seamIntensity).clamp(0.0, 1.0);
+      final double seamAlpha = ((dockProgress - 0.6) / 0.4 * seamIntensity)
+          .clamp(0.0, 1.0);
 
       // Energy Seam Glow
       final Paint seamGlow = Paint()

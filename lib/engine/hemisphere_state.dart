@@ -1,16 +1,19 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../core/constants/palette.dart';
 import '../core/constants/physics_constants.dart';
 
 enum MechanicSide { left, right }
+
 enum HemisphereMechanic {
-  orb,           // Pair 1: Gravity Defier
-  dart,          // Pair 1: Rail Weaver
-  phaseCore,     // Pair 2: Ikaruga-style color inverter
-  slalomDrift,   // Pair 2: Fluid sine-wave chasm drifter
-  shieldPing,    // Pair 3: Rhythm reflex deflector
-  quantumWarp,   // Pair 3: Binary dual-track hopper
+  orb, // Pair 1: Gravity Defier
+  dart, // Pair 1: Rail Weaver
+  phaseCore, // Pair 2: Ikaruga-style color inverter
+  slalomDrift, // Pair 2: Fluid sine-wave chasm drifter
+  shieldPing, // Pair 3: Rhythm reflex deflector
+  quantumWarp, // Pair 3: Binary dual-track hopper
 }
 
 class HemisphereState {
@@ -45,7 +48,11 @@ class HemisphereState {
   Color rightFg = SplitPalette.darkBg;
 
   // Initial setup
-  void reset(double screenWidth, {HemisphereMechanic initialLeft = HemisphereMechanic.orb, HemisphereMechanic initialRight = HemisphereMechanic.dart}) {
+  void reset(
+    double screenWidth, {
+    HemisphereMechanic initialLeft = HemisphereMechanic.orb,
+    HemisphereMechanic initialRight = HemisphereMechanic.dart,
+  }) {
     initialLeftMechanic = initialLeft;
     leftMechanic = initialLeft;
     rightMechanic = initialRight;
@@ -89,7 +96,8 @@ class HemisphereState {
     if (survivalTime < 60.0) {
       nextMutationTime = ((survivalTime / 15.0).floor() + 1) * 15.0;
     } else {
-      nextMutationTime = 60.0 + (((survivalTime - 60.0) / 10.0).floor() + 1) * 10.0;
+      nextMutationTime =
+          60.0 + (((survivalTime - 60.0) / 10.0).floor() + 1) * 10.0;
     }
 
     final double timeUntilNextMutation = nextMutationTime - survivalTime;
@@ -100,11 +108,17 @@ class HemisphereState {
       polarityFlipWarningRemaining = 1.5;
     }
     if (polarityFlipWarningRemaining > 0.0) {
-      polarityFlipWarningRemaining = math.max(0.0, polarityFlipWarningRemaining - dt);
+      polarityFlipWarningRemaining = math.max(
+        0.0,
+        polarityFlipWarningRemaining - dt,
+      );
     }
 
     // Tug-of-war active between 30s and 45s, and also resumes intermittently past 60s
-    isTugOfWarActive = isMutationEnabled && ((survivalTime >= 30.0 && survivalTime < 45.0) || (survivalTime >= 70.0));
+    isTugOfWarActive =
+        isMutationEnabled &&
+        ((survivalTime >= 30.0 && survivalTime < 45.0) ||
+            (survivalTime >= 70.0));
     if (isTugOfWarActive) {
       tugOfWarTime += dt;
       // Oscillate split between 0.32W and 0.68W via sine wave: W/2 + 0.16W * sin(1.4t)
@@ -116,7 +130,9 @@ class HemisphereState {
     rawSplitPixels = screenWidth * splitX;
 
     // Swap Warning (2.0s before next mutation)
-    if (isMutationEnabled && timeUntilNextMutation <= PhysicsConstants.swapWarningDuration && timeUntilNextMutation > 0.0) {
+    if (isMutationEnabled &&
+        timeUntilNextMutation <= PhysicsConstants.swapWarningDuration &&
+        timeUntilNextMutation > 0.0) {
       if (!isSwapWarning) {
         isSwapWarning = true;
       }
@@ -133,14 +149,20 @@ class HemisphereState {
     // Swap Transition execution
     if (isSwapping) {
       swapTransitionElapsed += dt;
-      swapProgress = (swapTransitionElapsed / PhysicsConstants.swapTransitionDuration).clamp(0.0, 1.0);
+      swapProgress =
+          (swapTransitionElapsed / PhysicsConstants.swapTransitionDuration)
+              .clamp(0.0, 1.0);
       if (swapProgress >= 1.0) {
         isSwapping = false;
         swapProgress = 0.0;
       }
     }
 
-    _updateColors(isOverdrive: isOverdrive, isGodMode: isGodMode, themeName: themeName);
+    _updateColors(
+      isOverdrive: isOverdrive,
+      isGodMode: isGodMode,
+      themeName: themeName,
+    );
   }
 
   void executeSwap({
@@ -158,7 +180,11 @@ class HemisphereState {
     swapProgress = 0.0;
     isSwapWarning = false;
 
-    _updateColors(isOverdrive: isOverdrive, isGodMode: isGodMode, themeName: themeName);
+    _updateColors(
+      isOverdrive: isOverdrive,
+      isGodMode: isGodMode,
+      themeName: themeName,
+    );
   }
 
   void updateTheme({
@@ -166,7 +192,11 @@ class HemisphereState {
     required bool isGodMode,
     required String themeName,
   }) {
-    _updateColors(isOverdrive: isOverdrive, isGodMode: isGodMode, themeName: themeName);
+    _updateColors(
+      isOverdrive: isOverdrive,
+      isGodMode: isGodMode,
+      themeName: themeName,
+    );
   }
 
   void _updateColors({

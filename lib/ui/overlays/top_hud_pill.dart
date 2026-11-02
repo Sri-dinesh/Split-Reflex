@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 import '../../core/services/haptic_choreographer.dart';
 import '../../core/services/procedural_audio_synth.dart';
@@ -34,7 +35,8 @@ class TopHudPill extends StatelessWidget {
     final isGod = battery.isGodMode;
     final isOverdrive = battery.isOverdrive;
     final isPlaying = controller.state == GamePlayState.playing;
-    final bool isOneLaneOffline = controller.playMode == PlayHandMode.oneHand &&
+    final bool isOneLaneOffline =
+        controller.playMode == PlayHandMode.oneHand &&
         (!controller.orbAlive || !controller.dartAlive) &&
         (controller.orbAlive != controller.dartAlive);
 
@@ -80,11 +82,15 @@ class TopHudPill extends StatelessWidget {
                       ),
                       const SizedBox(width: 8.0),
                       _buildGlassIcon(
-                        icon: battery.isSimulated ? Icons.battery_charging_full_rounded : Icons.bolt_rounded,
+                        icon: battery.isSimulated
+                            ? Icons.battery_charging_full_rounded
+                            : Icons.bolt_rounded,
                         tooltip: 'Battery Simulation',
                         iconColor: isGod
                             ? SplitPalette.godModeGold
-                            : (isOverdrive ? SplitPalette.hazardCrimson : Colors.white70),
+                            : (isOverdrive
+                                  ? SplitPalette.hazardCrimson
+                                  : Colors.white70),
                         onTap: () {
                           ProceduralAudioSynth.instance.playTap();
                           HapticChoreographer.instance.triggerTap();
@@ -119,7 +125,10 @@ class TopHudPill extends StatelessWidget {
 
                 // 2. Center Telemetry HUD (Score & Time)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 7.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 7.0,
+                  ),
                   decoration: BoxDecoration(
                     color: badgeBg,
                     borderRadius: BorderRadius.circular(22.0),
@@ -153,7 +162,8 @@ class TopHudPill extends StatelessWidget {
                       ),
                       // Timer
                       Text(
-                        (controller.state == GamePlayState.attract || controller.state == GamePlayState.countdown)
+                        (controller.state == GamePlayState.attract ||
+                                controller.state == GamePlayState.countdown)
                             ? '00:00.00'
                             : _formatTimer(controller.survivalTime),
                         style: const TextStyle(
@@ -168,16 +178,23 @@ class TopHudPill extends StatelessWidget {
 
                 // 3. Multiplier / Status Indicator
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10.0,
+                    vertical: 6.0,
+                  ),
                   decoration: BoxDecoration(
                     color: isGod
                         ? SplitPalette.godModeGold.withOpacity(0.15)
-                        : (isOverdrive ? SplitPalette.hazardCrimson.withOpacity(0.15) : Colors.white.withOpacity(0.06)),
+                        : (isOverdrive
+                              ? SplitPalette.hazardCrimson.withOpacity(0.15,)
+                              : Colors.white.withOpacity(0.06)),
                     borderRadius: BorderRadius.circular(16.0),
                     border: Border.all(
                       color: isGod
                           ? SplitPalette.godModeGold.withOpacity(0.6)
-                          : (isOverdrive ? SplitPalette.hazardCrimson.withOpacity(0.6) : Colors.white12),
+                          : (isOverdrive
+                                ? SplitPalette.hazardCrimson.withOpacity(0.6,)
+                                : Colors.white12),
                       width: 1.0,
                     ),
                   ),
@@ -185,12 +202,16 @@ class TopHudPill extends StatelessWidget {
                     isGod
                         ? '10x GOD'
                         : (isOverdrive
-                            ? '${battery.scoreMultiplier.toStringAsFixed(1)}x'
-                            : (controller.playMode == PlayHandMode.oneHand ? '1-HAND' : '2-HANDS')),
+                              ? '${battery.scoreMultiplier.toStringAsFixed(1)}x'
+                              : (controller.playMode == PlayHandMode.oneHand
+                                    ? '1-HAND'
+                                    : '2-HANDS')),
                     style: TextStyle(
                       color: isGod
                           ? SplitPalette.godModeGold
-                          : (isOverdrive ? SplitPalette.hazardCrimson : Colors.white70),
+                          : (isOverdrive
+                                ? SplitPalette.hazardCrimson
+                                : Colors.white70),
                       fontSize: 10.5,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
@@ -204,7 +225,10 @@ class TopHudPill extends StatelessWidget {
             if (isOneLaneOffline && isPlaying) ...[
               const SizedBox(height: 6.0),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 4.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14.0,
+                  vertical: 4.0,
+                ),
                 decoration: BoxDecoration(
                   color: SplitPalette.hazardCrimson.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(20.0),
@@ -239,7 +263,10 @@ class TopHudPill extends StatelessWidget {
             if (battery.hasPenalty) ...[
               const SizedBox(height: 4.0),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 3.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10.0,
+                  vertical: 3.0,
+                ),
                 decoration: BoxDecoration(
                   color: SplitPalette.hazardCrimson,
                   borderRadius: BorderRadius.circular(6.0),

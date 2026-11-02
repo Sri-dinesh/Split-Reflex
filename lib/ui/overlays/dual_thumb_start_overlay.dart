@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+
 import '../../core/constants/app_icon_data.dart';
 import '../../core/constants/palette.dart';
 import '../../core/services/haptic_choreographer.dart';
@@ -88,44 +90,81 @@ class DualThumbStartOverlay extends StatelessWidget {
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 24.0,
-                  vertical: isCompact ? 10.0 : 16.0,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // 1. Top Navigation Bar (Header)
-                    _buildTopBar(context, isGod, isOverdrive),
-                    const Spacer(flex: 1),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 24.0,
+                      vertical: isCompact ? 10.0 : 16.0,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.hasBoundedHeight
+                            ? constraints.maxHeight - (isCompact ? 20.0 : 32.0)
+                            : 0.0,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // 1. Top Navigation Bar (Header)
+                          _buildTopBar(context, isGod, isOverdrive),
+                          SizedBox(height: isCompact ? 10.0 : 16.0),
 
-                    // 2. Hero Identity (Logo & Title)
-                    _buildHeroIdentity(isCompact),
-                    const Spacer(flex: 1),
+                          // 2. Hero Identity (Logo & Title)
+                          _buildHeroIdentity(isCompact),
+                          SizedBox(height: isCompact ? 10.0 : 16.0),
 
-                    // 3. Game Mode Selector
-                    _buildModeSelector(),
-                    SizedBox(height: isCompact ? 10.0 : 14.0),
+                          // 3. Game Mode Selector
+                          _buildModeSelector(),
+                          SizedBox(height: isCompact ? 8.0 : 14.0),
 
-                    // 4. Mechanics Briefing Card
-                    _buildMechanicsCard(),
-                    SizedBox(height: isCompact ? 10.0 : 14.0),
+                          // 4. Mechanics Briefing Card
+                          _buildMechanicsCard(),
+                          SizedBox(height: isCompact ? 8.0 : 14.0),
 
-                    // 5. Quick Format Pills (Solo/Duo & 1H/2H)
-                    _buildFormatPills(),
-                    const Spacer(flex: 2),
+                          // 5. Quick Format Pills (Solo/Duo & 1H/2H)
+                          _buildFormatPills(),
+                          SizedBox(height: isCompact ? 12.0 : 20.0),
 
-                    // 6. Signature Biometric Sensor Pads & Quick Launch
-                    _buildBiometricLaunchSection(isCompact),
-                    SizedBox(height: isCompact ? 6.0 : 12.0),
-                  ],
-                ),
+                          // 6. Signature Biometric Sensor Pads & Quick Launch
+                          _buildBiometricLaunchSection(isCompact),
+                          SizedBox(height: isCompact ? 6.0 : 10.0),
+
+                          // 7. Health & safety notice (photosensitivity)
+                          _buildSafetyNotice(isCompact),
+                          SizedBox(height: isCompact ? 4.0 : 8.0),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  /// Compact, always-visible photosensitivity warning.
+  ///
+  /// The game uses strobing impact flashes, so this is surfaced before the
+  /// player starts rather than buried in a menu.
+  Widget _buildSafetyNotice(bool isCompact) {
+    return Text(
+      'Photosensitivity: rapid flashing visuals. '
+      'Play in a well-lit room and take a break if you feel unwell.',
+      textAlign: TextAlign.center,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: Colors.white38,
+        fontSize: isCompact ? 8.5 : 9.5,
+        height: 1.3,
+        letterSpacing: 0.1,
+      ),
     );
   }
 
@@ -139,12 +178,16 @@ class DualThumbStartOverlay extends StatelessWidget {
           decoration: BoxDecoration(
             color: isGod
                 ? SplitPalette.godModeGold.withOpacity(0.12)
-                : (isOverdrive ? SplitPalette.hazardCrimson.withOpacity(0.12) : Colors.white.withOpacity(0.06)),
+                : (isOverdrive
+                      ? SplitPalette.hazardCrimson.withOpacity(0.12)
+                      : Colors.white.withOpacity(0.06)),
             borderRadius: BorderRadius.circular(20.0),
             border: Border.all(
               color: isGod
                   ? SplitPalette.godModeGold.withOpacity(0.5)
-                  : (isOverdrive ? SplitPalette.hazardCrimson.withOpacity(0.5) : Colors.white12),
+                  : (isOverdrive
+                        ? SplitPalette.hazardCrimson.withOpacity(0.5)
+                        : Colors.white12),
               width: 1.0,
             ),
           ),
@@ -152,23 +195,31 @@ class DualThumbStartOverlay extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                isGod ? Icons.flash_on_rounded : (isOverdrive ? Icons.bolt_rounded : Icons.battery_charging_full_rounded),
+                isGod
+                    ? Icons.flash_on_rounded
+                    : (isOverdrive
+                          ? Icons.bolt_rounded
+                          : Icons.battery_charging_full_rounded),
                 size: 14.0,
                 color: isGod
                     ? SplitPalette.godModeGold
-                    : (isOverdrive ? SplitPalette.hazardCrimson : SplitPalette.nearMissCyan),
+                    : (isOverdrive
+                          ? SplitPalette.hazardCrimson
+                          : SplitPalette.nearMissCyan),
               ),
               const SizedBox(width: 6.0),
               Text(
                 isGod
                     ? '10x GOD MODE'
                     : (isOverdrive
-                        ? '${controller.batteryState.scoreMultiplier.toStringAsFixed(1)}x OVERDRIVE'
-                        : '${controller.batteryState.batteryLevel}% BATTERY'),
+                          ? '${controller.batteryState.scoreMultiplier.toStringAsFixed(1)}x OVERDRIVE'
+                          : '${controller.batteryState.batteryLevel}% BATTERY'),
                 style: TextStyle(
                   color: isGod
                       ? SplitPalette.godModeGold
-                      : (isOverdrive ? SplitPalette.hazardCrimson : Colors.white70),
+                      : (isOverdrive
+                            ? SplitPalette.hazardCrimson
+                            : Colors.white70),
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
@@ -354,10 +405,14 @@ class DualThumbStartOverlay extends StatelessWidget {
           curve: Curves.easeOutCubic,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white.withOpacity(0.12) : Colors.transparent,
+            color: isSelected
+                ? Colors.white.withOpacity(0.12)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(9.0),
             border: Border.all(
-              color: isSelected ? accentColor.withOpacity(0.8) : Colors.transparent,
+              color: isSelected
+                  ? accentColor.withOpacity(0.8)
+                  : Colors.transparent,
               width: 1.0,
             ),
           ),
@@ -384,7 +439,10 @@ class DualThumbStartOverlay extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF111116),
         borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.0),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.08),
+          width: 1.0,
+        ),
       ),
       child: Row(
         children: [
@@ -492,8 +550,12 @@ class DualThumbStartOverlay extends StatelessWidget {
         // Solo vs Duo
         Expanded(
           child: _buildSmallToggle(
-            label: controller.sessionMode == GameSessionMode.solo ? 'Solo (1P)' : 'Duo (2P)',
-            icon: controller.sessionMode == GameSessionMode.solo ? Icons.person_rounded : Icons.people_rounded,
+            label: controller.sessionMode == GameSessionMode.solo
+                ? 'Solo (1P)'
+                : 'Duo (2P)',
+            icon: controller.sessionMode == GameSessionMode.solo
+                ? Icons.person_rounded
+                : Icons.people_rounded,
             isActive: controller.sessionMode == GameSessionMode.duoCoop,
             activeColor: Colors.amberAccent,
             onTap: controller.toggleSessionMode,
@@ -503,8 +565,12 @@ class DualThumbStartOverlay extends StatelessWidget {
         // 2-Hands vs 1-Hand
         Expanded(
           child: _buildSmallToggle(
-            label: controller.playMode == PlayHandMode.twoHands ? '2-Hands Strict' : '1-Hand Survival',
-            icon: controller.playMode == PlayHandMode.twoHands ? Icons.bolt_rounded : Icons.shield_outlined,
+            label: controller.playMode == PlayHandMode.twoHands
+                ? '2-Hands Strict'
+                : '1-Hand Survival',
+            icon: controller.playMode == PlayHandMode.twoHands
+                ? Icons.bolt_rounded
+                : Icons.shield_outlined,
             isActive: controller.playMode == PlayHandMode.oneHand,
             activeColor: SplitPalette.nearMissCyan,
             onTap: controller.togglePlayMode,
@@ -514,8 +580,12 @@ class DualThumbStartOverlay extends StatelessWidget {
         // Steering
         Expanded(
           child: _buildSmallToggle(
-            label: controller.controlMode == ControlMode.touchSwipe ? 'Touch' : 'Gyro',
-            icon: controller.controlMode == ControlMode.touchSwipe ? Icons.touch_app_rounded : Icons.screen_rotation_rounded,
+            label: controller.controlMode == ControlMode.touchSwipe
+                ? 'Touch'
+                : 'Gyro',
+            icon: controller.controlMode == ControlMode.touchSwipe
+                ? Icons.touch_app_rounded
+                : Icons.screen_rotation_rounded,
             isActive: controller.controlMode == ControlMode.gyroTilt,
             activeColor: Colors.purpleAccent,
             onTap: controller.toggleControlMode,
@@ -539,10 +609,14 @@ class DualThumbStartOverlay extends StatelessWidget {
         height: 36.0,
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
         decoration: BoxDecoration(
-          color: isActive ? activeColor.withOpacity(0.12) : Colors.white.withOpacity(0.04),
+          color: isActive
+              ? activeColor.withOpacity(0.12)
+              : Colors.white.withOpacity(0.04),
           borderRadius: BorderRadius.circular(10.0),
           border: Border.all(
-            color: isActive ? activeColor.withOpacity(0.5) : Colors.white12,
+            color: isActive
+                ? activeColor.withOpacity(0.5)
+                : Colors.white12,
             width: 1.0,
           ),
         ),
@@ -605,7 +679,11 @@ class DualThumbStartOverlay extends StatelessWidget {
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.play_arrow_rounded, color: Colors.black, size: 22.0),
+                  Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.black,
+                    size: 22.0,
+                  ),
                   SizedBox(width: 8.0),
                   Text(
                     'Start Run',
@@ -626,25 +704,38 @@ class DualThumbStartOverlay extends StatelessWidget {
 
         // Dual Biometric Touch Pads (Signature Mechanic)
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: isCompact ? 8.0 : 12.0),
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 10.0 : 16.0,
+            vertical: isCompact ? 8.0 : 12.0,
+          ),
           decoration: BoxDecoration(
             color: const Color(0xFF0F0F14).withOpacity(0.9),
             borderRadius: BorderRadius.circular(18.0),
-            border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.0),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.08),
+              width: 1.0,
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               // Left Pad
-              GestureDetector(
-                onTapDown: (_) => controller.inputRouter.leftThumbHeld = true,
-                onTapUp: (_) => controller.inputRouter.leftThumbHeld = false,
-                onTapCancel: () => controller.inputRouter.leftThumbHeld = false,
-                child: _SensorPad(
-                  label: isDuo ? 'Player 1' : 'Left Thumb',
-                  isHeld: controller.inputRouter.leftThumbHeld,
-                  progress: progress,
-                  accentColor: SplitPalette.nearMissCyan,
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (_) => controller.inputRouter.leftThumbHeld = true,
+                  onTapUp: (_) => controller.inputRouter.leftThumbHeld = false,
+                  onTapCancel: () =>
+                      controller.inputRouter.leftThumbHeld = false,
+                  child: Center(
+                    child: _SensorPad(
+                      label: isDuo ? 'Player 1' : 'Left Thumb',
+                      isHeld: controller.inputRouter.leftThumbHeld,
+                      progress: progress,
+                      accentColor: SplitPalette.nearMissCyan,
+                      isCompact: isCompact,
+                    ),
+                  ),
                 ),
               ),
 
@@ -658,7 +749,9 @@ class DualThumbStartOverlay extends StatelessWidget {
                     child: Text(
                       progress > 0.0 ? '${(progress * 100).toInt()}%' : 'HOLD',
                       style: TextStyle(
-                        color: progress > 0.0 ? SplitPalette.nearMissCyan : Colors.white38,
+                        color: progress > 0.0
+                            ? SplitPalette.nearMissCyan
+                            : Colors.white38,
                         fontSize: 9.5,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.8,
@@ -670,15 +763,23 @@ class DualThumbStartOverlay extends StatelessWidget {
               ),
 
               // Right Pad
-              GestureDetector(
-                onTapDown: (_) => controller.inputRouter.rightThumbHeld = true,
-                onTapUp: (_) => controller.inputRouter.rightThumbHeld = false,
-                onTapCancel: () => controller.inputRouter.rightThumbHeld = false,
-                child: _SensorPad(
-                  label: isDuo ? 'Player 2' : 'Right Thumb',
-                  isHeld: controller.inputRouter.rightThumbHeld,
-                  progress: progress,
-                  accentColor: SplitPalette.hazardCrimson,
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (_) =>
+                      controller.inputRouter.rightThumbHeld = true,
+                  onTapUp: (_) => controller.inputRouter.rightThumbHeld = false,
+                  onTapCancel: () =>
+                      controller.inputRouter.rightThumbHeld = false,
+                  child: Center(
+                    child: _SensorPad(
+                      label: isDuo ? 'Player 2' : 'Right Thumb',
+                      isHeld: controller.inputRouter.rightThumbHeld,
+                      progress: progress,
+                      accentColor: SplitPalette.hazardCrimson,
+                      isCompact: isCompact,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -694,26 +795,32 @@ class _SensorPad extends StatelessWidget {
   final bool isHeld;
   final double progress;
   final Color accentColor;
+  final bool isCompact;
 
   const _SensorPad({
     required this.label,
     required this.isHeld,
     required this.progress,
     required this.accentColor,
+    this.isCompact = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final double padSize = isCompact ? 44.0 : 58.0;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 140),
-          width: 58.0,
-          height: 58.0,
+          width: padSize,
+          height: padSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isHeld ? accentColor.withOpacity(0.18) : Colors.white.withOpacity(0.04),
+            color: isHeld
+                ? accentColor.withOpacity(0.18)
+                : Colors.white.withOpacity(0.04),
             border: Border.all(
               color: isHeld ? accentColor : Colors.white24,
               width: isHeld ? 2.0 : 1.2,
@@ -737,7 +844,7 @@ class _SensorPad extends StatelessWidget {
               child: Icon(
                 Icons.fingerprint_rounded,
                 color: isHeld ? accentColor : Colors.white38,
-                size: 26.0,
+                size: isCompact ? 20.0 : 26.0,
               ),
             ),
           ),
@@ -745,9 +852,11 @@ class _SensorPad extends StatelessWidget {
         const SizedBox(height: 5.0),
         Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: isHeld ? accentColor : Colors.white60,
-            fontSize: 10.0,
+            fontSize: isCompact ? 9.0 : 10.0,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -781,7 +890,13 @@ class _SensorArcPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final rect = Rect.fromCircle(center: center, radius: radius);
-    canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * progress, false, progressPaint);
+    canvas.drawArc(
+      rect,
+      -math.pi / 2,
+      math.pi * 2 * progress,
+      false,
+      progressPaint,
+    );
   }
 
   @override

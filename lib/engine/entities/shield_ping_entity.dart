@@ -5,10 +5,7 @@ class PlasmaBolt {
   final double speed;
   bool deflected = false;
 
-  PlasmaBolt({
-    required this.y,
-    required this.speed,
-  });
+  PlasmaBolt({required this.y, required this.speed});
 }
 
 class ShieldPingEntity {

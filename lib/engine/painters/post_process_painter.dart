@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 import '../../core/services/battery_telemetry_service.dart';
 
@@ -22,10 +24,15 @@ class PostProcessPainter {
 
     // 1. Edge Pulse for Overdrive & God Mode
     final double pulse = 0.5 + 0.5 * math.sin(survivalTime * 6.0);
-    final double borderAlpha = batteryState.isGodMode ? (0.4 + 0.4 * pulse) : (0.2 + 0.25 * pulse);
+    final double borderAlpha = batteryState.isGodMode
+        ? (0.4 + 0.4 * pulse)
+        : (0.2 + 0.25 * pulse);
 
-    _borderPaint.color = (batteryState.isGodMode ? SplitPalette.godModeGold : SplitPalette.overdriveRed)
-        .withOpacity(borderAlpha);
+    _borderPaint.color =
+        (batteryState.isGodMode
+                ? SplitPalette.godModeGold
+                : SplitPalette.overdriveRed)
+            .withOpacity(borderAlpha);
     _borderPaint.strokeWidth = batteryState.isGodMode ? 6.0 : 4.0;
 
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), _borderPaint);
@@ -91,7 +98,10 @@ class PostProcessPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
-    canvas.drawRect(Rect.fromLTWH(2, 2, size.width - 4, size.height - 4), goldPaint);
+    canvas.drawRect(
+      Rect.fromLTWH(2, 2, size.width - 4, size.height - 4),
+      goldPaint,
+    );
   }
 
   static void _paintScanlines(Canvas canvas, Size size, double time) {
@@ -109,10 +119,7 @@ class PostProcessPainter {
       _vignettePaint.shader = RadialGradient(
         center: Alignment.center,
         radius: 0.9,
-        colors: [
-          Colors.transparent,
-          Colors.black.withOpacity(0.45),
-        ],
+        colors: [Colors.transparent, Colors.black.withOpacity(0.45)],
         stops: const [0.65, 1.0],
       ).createShader(rect);
     }

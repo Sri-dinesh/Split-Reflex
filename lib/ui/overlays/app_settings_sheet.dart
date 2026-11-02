@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 import '../../core/services/haptic_choreographer.dart';
 import '../../core/services/leaderboard_service.dart';
+import '../../core/services/preferences_service.dart';
 import '../../core/services/procedural_audio_synth.dart';
 import '../../engine/game_controller.dart';
 
@@ -76,23 +78,37 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.0),
-                borderSide: const BorderSide(color: SplitPalette.nearMissCyan, width: 1.5),
+                borderSide: const BorderSide(
+                  color: SplitPalette.nearMissCyan,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white54),
+              ),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context, textController.text.trim().toUpperCase()),
+              onPressed: () => Navigator.pop(
+                context,
+                textController.text.trim().toUpperCase(),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: SplitPalette.nearMissCyan,
                 foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
               ),
-              child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w700)),
+              child: const Text(
+                'Save',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         );
@@ -130,16 +146,24 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white54),
+              ),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: SplitPalette.hazardCrimson,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
               ),
-              child: const Text('Reset', style: TextStyle(fontWeight: FontWeight.w700)),
+              child: const Text(
+                'Reset',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         );
@@ -161,6 +185,147 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
     }
   }
 
+  /// Explains, in plain language, what the app stores and what it does not.
+  Future<void> _showPrivacyAndData() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF141419),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+            side: const BorderSide(color: Colors.white24, width: 1.0),
+          ),
+          title: const Row(
+            children: [
+              Icon(
+                Icons.shield_outlined,
+                color: SplitPalette.nearMissCyan,
+                size: 20,
+              ),
+              SizedBox(width: 8.0),
+              Expanded(
+                child: Text(
+                  'Privacy & Data',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: const SingleChildScrollView(
+            child: Text(
+              'Split Reflex works completely offline.\n\n'
+              '• It has no internet permission, no ads, no analytics and no '
+              'third-party SDKs.\n'
+              '• Your callsign, run history, high score and preferences are '
+              'stored only on this device.\n'
+              '• Nothing is uploaded, sold or shared with anyone.\n'
+              '• Leaderboards are local: the Hall of Records only shows runs '
+              'recorded on this device.\n'
+              '• Sharing a death receipt sends an image through the app you '
+              'choose in the Android share sheet; the game itself never '
+              'transmits it.\n\n'
+              'Use “Erase All Local Data” below to delete everything the app '
+              'has stored, or uninstall the app to remove it with the app.',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 12.5,
+                height: 1.5,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  color: SplitPalette.nearMissCyan,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Deletes every byte the app has written: scores, callsign and preferences.
+  Future<void> _confirmEraseAllData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF141414),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+            side: const BorderSide(color: Colors.white24, width: 1.0),
+          ),
+          title: const Text(
+            'Erase All Local Data?',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: const Text(
+            'This permanently deletes your callsign, run history, high score '
+            'and every preference on this device. It cannot be undone.',
+            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: SplitPalette.hazardCrimson,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+              ),
+              child: const Text(
+                'Erase Everything',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    await LeaderboardService.instance.clearAllUserData();
+    await PreferencesService.instance.clearAll();
+    widget.controller.resetToFactoryDefaults();
+
+    if (!mounted) return;
+    setState(() {
+      _callsign = 'PILOT';
+      _highScore = 0;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('All local data erased.'),
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFF222228),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
@@ -172,9 +337,7 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
       decoration: const BoxDecoration(
         color: Color(0xFF0C0C10),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
-        border: Border(
-          top: BorderSide(color: Colors.white12, width: 1.0),
-        ),
+        border: Border(top: BorderSide(color: Colors.white12, width: 1.0)),
       ),
       child: SafeArea(
         top: false,
@@ -195,47 +358,63 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
 
             // Top Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(7.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.06),
-                          borderRadius: BorderRadius.circular(10.0),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7.0),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.06),
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          child: const Icon(
+                            Icons.tune_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                         ),
-                        child: const Icon(Icons.tune_rounded, color: Colors.white, size: 18),
-                      ),
-                      const SizedBox(width: 10.0),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Preferences',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.2,
-                            ),
+                        const SizedBox(width: 10.0),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Preferences',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                              Text(
+                                'Hardware, audio & gameplay configuration',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            'Hardware, audio & gameplay configuration',
-                            style: TextStyle(
-                              color: Colors.white38,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8.0),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 22),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white60,
+                      size: 22,
+                    ),
                     splashRadius: 20,
                     onPressed: () => Navigator.pop(context),
                   ),
@@ -250,7 +429,10 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20.0,
+                  vertical: 16.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -266,12 +448,18 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                           accentColor: SplitPalette.nearMissCyan,
                           onChanged: (val) {
                             setState(() {
-                              ProceduralAudioSynth.instance.soundEnabled = val;
+                              PreferencesService.instance
+                                  .setSoundEnabled(val)
+                                  .ignore();
                               if (val) ProceduralAudioSynth.instance.playTap();
                             });
                           },
                         ),
-                        const Divider(color: Colors.white10, height: 1.0, indent: 46.0),
+                        const Divider(
+                          color: Colors.white10,
+                          height: 1.0,
+                          indent: 46.0,
+                        ),
                         _buildSwitchTile(
                           icon: Icons.vibration_rounded,
                           title: 'Tactile Haptics',
@@ -280,8 +468,12 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                           accentColor: SplitPalette.hazardCrimson,
                           onChanged: (val) {
                             setState(() {
-                              HapticChoreographer.instance.hapticsEnabled = val;
-                              if (val) HapticChoreographer.instance.triggerTap();
+                              PreferencesService.instance
+                                  .setHapticsEnabled(val)
+                                  .ignore();
+                              if (val) {
+                                HapticChoreographer.instance.triggerTap();
+                              }
                             });
                           },
                         ),
@@ -301,11 +493,16 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.sensors_rounded, color: Colors.white70, size: 18),
+                                  const Icon(
+                                    Icons.sensors_rounded,
+                                    color: Colors.white70,
+                                    size: 18,
+                                  ),
                                   const SizedBox(width: 10.0),
                                   const Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Input Mode',
@@ -317,16 +514,23 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                         ),
                                         Text(
                                           'Steering method for Rail Dart and Slalom',
-                                          style: TextStyle(color: Colors.white38, fontSize: 11),
+                                          style: TextStyle(
+                                            color: Colors.white38,
+                                            fontSize: 11,
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0,
+                                      vertical: 3.0,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: controller.isGyroAvailable
-                                          ? const Color(0xFF00E676).withOpacity(0.12)
+                                          ? const Color(0xFF00E676)
+                                                .withOpacity(0.12)
                                           : Colors.white10,
                                       borderRadius: BorderRadius.circular(6.0),
                                       border: Border.all(
@@ -337,7 +541,9 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                       ),
                                     ),
                                     child: Text(
-                                      controller.isGyroAvailable ? 'GYRO READY' : 'TOUCH ONLY',
+                                      controller.isGyroAvailable
+                                          ? 'GYRO READY'
+                                          : 'TOUCH ONLY',
                                       style: TextStyle(
                                         color: controller.isGyroAvailable
                                             ? const Color(0xFF00E676)
@@ -357,9 +563,13 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                     child: _buildChoiceButton(
                                       icon: Icons.touch_app_rounded,
                                       label: 'Touch Drag',
-                                      isSelected: controller.controlMode == ControlMode.touchSwipe,
+                                      isSelected:
+                                          controller.controlMode ==
+                                          ControlMode.touchSwipe,
                                       onTap: () {
-                                        controller.setControlMode(ControlMode.touchSwipe);
+                                        controller.setControlMode(
+                                          ControlMode.touchSwipe,
+                                        );
                                         setState(() {});
                                       },
                                     ),
@@ -369,9 +579,13 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                     child: _buildChoiceButton(
                                       icon: Icons.screen_rotation_rounded,
                                       label: 'Gyro Tilt',
-                                      isSelected: controller.controlMode == ControlMode.gyroTilt,
+                                      isSelected:
+                                          controller.controlMode ==
+                                          ControlMode.gyroTilt,
                                       onTap: () {
-                                        controller.setControlMode(ControlMode.gyroTilt);
+                                        controller.setControlMode(
+                                          ControlMode.gyroTilt,
+                                        );
                                         setState(() {});
                                       },
                                     ),
@@ -406,7 +620,10 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                               const SizedBox(height: 2.0),
                               const Text(
                                 'Single lane crash handling protocol',
-                                style: TextStyle(color: Colors.white38, fontSize: 11),
+                                style: TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: 11,
+                                ),
                               ),
                               const SizedBox(height: 10.0),
                               Row(
@@ -415,10 +632,15 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                     child: _buildChoiceButton(
                                       icon: Icons.bolt_rounded,
                                       label: '2-Hands Strict',
-                                      sublabel: 'Dual failure triggers game over',
-                                      isSelected: controller.playMode == PlayHandMode.twoHands,
+                                      sublabel:
+                                          'Dual failure triggers game over',
+                                      isSelected:
+                                          controller.playMode ==
+                                          PlayHandMode.twoHands,
                                       onTap: () {
-                                        controller.setPlayMode(PlayHandMode.twoHands);
+                                        controller.setPlayMode(
+                                          PlayHandMode.twoHands,
+                                        );
                                         setState(() {});
                                       },
                                     ),
@@ -429,9 +651,13 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                       icon: Icons.shield_outlined,
                                       label: '1-Hand Survival',
                                       sublabel: 'Surviving side keeps going',
-                                      isSelected: controller.playMode == PlayHandMode.oneHand,
+                                      isSelected:
+                                          controller.playMode ==
+                                          PlayHandMode.oneHand,
                                       onTap: () {
-                                        controller.setPlayMode(PlayHandMode.oneHand);
+                                        controller.setPlayMode(
+                                          PlayHandMode.oneHand,
+                                        );
                                         setState(() {});
                                       },
                                     ),
@@ -452,7 +678,10 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                               const SizedBox(height: 2.0),
                               const Text(
                                 'Solo mental endurance vs Shared 2-player device co-op',
-                                style: TextStyle(color: Colors.white38, fontSize: 11),
+                                style: TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: 11,
+                                ),
                               ),
                               const SizedBox(height: 10.0),
                               Row(
@@ -462,9 +691,13 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                       icon: Icons.person_rounded,
                                       label: 'Solo (1P)',
                                       sublabel: 'Split-brain challenge',
-                                      isSelected: controller.sessionMode == GameSessionMode.solo,
+                                      isSelected:
+                                          controller.sessionMode ==
+                                          GameSessionMode.solo,
                                       onTap: () {
-                                        controller.setSessionMode(GameSessionMode.solo);
+                                        controller.setSessionMode(
+                                          GameSessionMode.solo,
+                                        );
                                         setState(() {});
                                       },
                                     ),
@@ -475,9 +708,13 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                       icon: Icons.people_rounded,
                                       label: 'Duo Co-Op (2P)',
                                       sublabel: 'P1 Left vs P2 Right',
-                                      isSelected: controller.sessionMode == GameSessionMode.duoCoop,
+                                      isSelected:
+                                          controller.sessionMode ==
+                                          GameSessionMode.duoCoop,
                                       onTap: () {
-                                        controller.setSessionMode(GameSessionMode.duoCoop);
+                                        controller.setSessionMode(
+                                          GameSessionMode.duoCoop,
+                                        );
                                         setState(() {});
                                       },
                                     ),
@@ -508,9 +745,13 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                       theme: CyberTheme.monochrome,
                                       label: 'Monochrome',
                                       color: Colors.white,
-                                      isSelected: controller.theme == CyberTheme.monochrome,
+                                      isSelected:
+                                          controller.theme ==
+                                          CyberTheme.monochrome,
                                       onTap: () {
-                                        controller.setTheme(CyberTheme.monochrome);
+                                        controller.setTheme(
+                                          CyberTheme.monochrome,
+                                        );
                                         setState(() {});
                                       },
                                     ),
@@ -521,9 +762,13 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                       theme: CyberTheme.synthwave,
                                       label: 'Synthwave 84',
                                       color: SplitPalette.synthwavePink,
-                                      isSelected: controller.theme == CyberTheme.synthwave,
+                                      isSelected:
+                                          controller.theme ==
+                                          CyberTheme.synthwave,
                                       onTap: () {
-                                        controller.setTheme(CyberTheme.synthwave);
+                                        controller.setTheme(
+                                          CyberTheme.synthwave,
+                                        );
                                         setState(() {});
                                       },
                                     ),
@@ -538,7 +783,8 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                       theme: CyberTheme.matrix,
                                       label: 'Matrix Terminal',
                                       color: SplitPalette.matrixGreen,
-                                      isSelected: controller.theme == CyberTheme.matrix,
+                                      isSelected:
+                                          controller.theme == CyberTheme.matrix,
                                       onTap: () {
                                         controller.setTheme(CyberTheme.matrix);
                                         setState(() {});
@@ -551,9 +797,13 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                       theme: CyberTheme.cyberGold,
                                       label: 'Cyber Gold 24K',
                                       color: SplitPalette.goldBright,
-                                      isSelected: controller.theme == CyberTheme.cyberGold,
+                                      isSelected:
+                                          controller.theme ==
+                                          CyberTheme.cyberGold,
                                       onTap: () {
-                                        controller.setTheme(CyberTheme.cyberGold);
+                                        controller.setTheme(
+                                          CyberTheme.cyberGold,
+                                        );
                                         setState(() {});
                                       },
                                     ),
@@ -573,52 +823,166 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                     _buildSettingCard(
                       children: [
                         ListTile(
-                          leading: const Icon(Icons.badge_rounded, color: Colors.white70, size: 20),
+                          leading: const Icon(
+                            Icons.badge_rounded,
+                            color: Colors.white70,
+                            size: 20,
+                          ),
                           title: const Text(
                             'Callsign',
-                            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           subtitle: Text(
                             _callsign,
-                            style: const TextStyle(color: SplitPalette.nearMissCyan, fontSize: 13, fontWeight: FontWeight.w800),
+                            style: const TextStyle(
+                              color: SplitPalette.nearMissCyan,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                           trailing: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10.0,
+                              vertical: 5.0,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white12,
                               borderRadius: BorderRadius.circular(6.0),
                             ),
                             child: const Text(
                               'Edit',
-                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                           onTap: _editCallsign,
                         ),
-                        const Divider(color: Colors.white10, height: 1.0, indent: 46.0),
+                        const Divider(
+                          color: Colors.white10,
+                          height: 1.0,
+                          indent: 46.0,
+                        ),
                         ListTile(
-                          leading: const Icon(Icons.emoji_events_rounded, color: SplitPalette.godModeGold, size: 20),
+                          leading: const Icon(
+                            Icons.emoji_events_rounded,
+                            color: SplitPalette.godModeGold,
+                            size: 20,
+                          ),
                           title: const Text(
                             'Personal Best',
-                            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           subtitle: Text(
                             '$_highScore pts',
-                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
-                        const Divider(color: Colors.white10, height: 1.0, indent: 46.0),
+                        const Divider(
+                          color: Colors.white10,
+                          height: 1.0,
+                          indent: 46.0,
+                        ),
                         ListTile(
-                          leading: const Icon(Icons.delete_outline_rounded, color: SplitPalette.hazardCrimson, size: 20),
+                          leading: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: SplitPalette.hazardCrimson,
+                            size: 20,
+                          ),
                           title: const Text(
                             'Clear Run Records',
-                            style: TextStyle(color: SplitPalette.hazardCrimson, fontSize: 14, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              color: SplitPalette.hazardCrimson,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           subtitle: const Text(
                             'Erase local score history',
-                            style: TextStyle(color: Colors.white38, fontSize: 11),
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: 11,
+                            ),
                           ),
                           onTap: _confirmClearScores,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20.0),
+
+                    // Section 6: Data ownership & privacy
+                    _buildSectionHeader('DATA & PRIVACY'),
+                    _buildSettingCard(
+                      children: [
+                        ListTile(
+                          leading: const Icon(
+                            Icons.shield_outlined,
+                            color: SplitPalette.nearMissCyan,
+                            size: 20,
+                          ),
+                          title: const Text(
+                            'Privacy & Data',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'Offline only. No ads, tracking or network access.',
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: 11,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Colors.white38,
+                            size: 20,
+                          ),
+                          onTap: _showPrivacyAndData,
+                        ),
+                        const Divider(
+                          color: Colors.white10,
+                          height: 1.0,
+                          indent: 46.0,
+                        ),
+                        ListTile(
+                          leading: const Icon(
+                            Icons.delete_forever_rounded,
+                            color: SplitPalette.hazardCrimson,
+                            size: 20,
+                          ),
+                          title: const Text(
+                            'Erase All Local Data',
+                            style: TextStyle(
+                              color: SplitPalette.hazardCrimson,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'Scores, callsign and every preference',
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: 11,
+                            ),
+                          ),
+                          onTap: _confirmEraseAllData,
                         ),
                       ],
                     ),
@@ -650,11 +1014,15 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
   }
 
   Widget _buildSettingCard({required List<Widget> children}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF13131A),
+    return Material(
+      color: const Color(0xFF13131A),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.0),
+        side: BorderSide(
+          color: Colors.white.withOpacity(0.08),
+          width: 1.0,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -730,7 +1098,9 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white.withOpacity(0.12) : Colors.black26,
+          color: isSelected
+              ? Colors.white.withOpacity(0.12)
+              : Colors.black26,
           borderRadius: BorderRadius.circular(10.0),
           border: Border.all(
             color: isSelected ? Colors.white : Colors.white12,
@@ -803,7 +1173,12 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                 shape: BoxShape.circle,
                 color: color,
                 boxShadow: isSelected
-                    ? [BoxShadow(color: color.withOpacity(0.6), blurRadius: 6.0)]
+                    ? [
+                        BoxShadow(
+                          color: color.withOpacity(0.6),
+                          blurRadius: 6.0,
+                        ),
+                      ]
                     : null,
               ),
             ),

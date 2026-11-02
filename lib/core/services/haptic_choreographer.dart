@@ -13,7 +13,8 @@ class HapticChoreographer {
     try {
       final hasVibrator = await Vibration.hasVibrator();
       final hasAmplitudeControl = await Vibration.hasAmplitudeControl();
-      _hasCustomVibration = (hasVibrator == true) && (hasAmplitudeControl == true);
+      _hasCustomVibration =
+          (hasVibrator == true) && (hasAmplitudeControl == true);
     } catch (_) {
       _hasCustomVibration = false;
     }
@@ -72,7 +73,10 @@ class HapticChoreographer {
     if (!hapticsEnabled) return;
     try {
       if (_hasCustomVibration) {
-        Vibration.vibrate(pattern: [0, 60, 30, 120], intensities: [0, 255, 0, 200]);
+        Vibration.vibrate(
+          pattern: [0, 60, 30, 120],
+          intensities: [0, 255, 0, 200],
+        );
       } else {
         HapticFeedback.heavyImpact();
       }

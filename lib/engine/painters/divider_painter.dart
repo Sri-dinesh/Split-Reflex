@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 import '../../core/utils/math_utils.dart';
 import '../hemisphere_state.dart';
@@ -43,11 +45,16 @@ class DividerPainter {
     // Amplitude for pre-swap vibration
     double vibrationAmp = 0.0;
     if (hemisphereState.isSwapWarning) {
-      final double progress = (2.0 - hemisphereState.swapWarningRemaining).clamp(0.0, 2.0) / 2.0;
+      final double progress =
+          (2.0 - hemisphereState.swapWarningRemaining).clamp(0.0, 2.0) / 2.0;
       vibrationAmp = progress * 14.0;
     }
 
-    _dividerPaint.color = (hemisphereState.isSwapWarning ? SplitPalette.hazardCrimson : hemisphereState.leftFg).withOpacity(0.85);
+    _dividerPaint.color =
+        (hemisphereState.isSwapWarning
+                ? SplitPalette.hazardCrimson
+                : hemisphereState.leftFg)
+            .withOpacity(0.85);
     _dividerPaint.strokeWidth = hemisphereState.isSwapWarning ? 3.5 : 2.0;
 
     // Fast-path: straight line when calm (no vibration or swap wave)
@@ -68,7 +75,8 @@ class DividerPainter {
 
         double displaceX = 0.0;
         if (vibrationAmp > 0.0) {
-          displaceX = vibrationAmp * math.sin(midY * 0.05 + survivalTime * 40.0);
+          displaceX =
+              vibrationAmp * math.sin(midY * 0.05 + survivalTime * 40.0);
         } else if (hemisphereState.isSwapping) {
           final double delta = 30.0 * (1.0 - hemisphereState.swapProgress);
           displaceX = MathUtils.dampedSpring(
@@ -78,12 +86,7 @@ class DividerPainter {
           );
         }
 
-        _dividerPath.quadraticBezierTo(
-          splitX + displaceX,
-          midY,
-          splitX,
-          curY,
-        );
+        _dividerPath.quadraticBezierTo(splitX + displaceX, midY, splitX, curY);
       }
 
       canvas.drawPath(_dividerPath, _dividerPaint);

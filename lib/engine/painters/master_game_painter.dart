@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../entities/particle_pool.dart';
 import '../game_controller.dart';
 import '../hemisphere_state.dart';
@@ -36,15 +37,27 @@ class MasterGamePainter extends CustomPainter {
     }
 
     // 2. Death Zoom toward failure focal point
-    if (controller.state == GamePlayState.deathSlowmo && controller.deathZoom > 1.0) {
-      canvas.translate(controller.deathFocusPoint.dx, controller.deathFocusPoint.dy);
+    if (controller.state == GamePlayState.deathSlowmo &&
+        controller.deathZoom > 1.0) {
+      canvas.translate(
+        controller.deathFocusPoint.dx,
+        controller.deathFocusPoint.dy,
+      );
       canvas.scale(controller.deathZoom);
-      canvas.translate(-controller.deathFocusPoint.dx, -controller.deathFocusPoint.dy);
+      canvas.translate(
+        -controller.deathFocusPoint.dx,
+        -controller.deathFocusPoint.dy,
+      );
     }
 
     final double splitX = controller.hemisphereState.rawSplitPixels;
     final Rect leftRect = Rect.fromLTWH(0, 0, splitX, size.height);
-    final Rect rightRect = Rect.fromLTWH(splitX, 0, size.width - splitX, size.height);
+    final Rect rightRect = Rect.fromLTWH(
+      splitX,
+      0,
+      size.width - splitX,
+      size.height,
+    );
 
     // 3. Render Left Hemisphere
     canvas.save();
@@ -207,13 +220,26 @@ class MasterGamePainter extends CustomPainter {
 
     // If this hemisphere is destroyed in 1 Hand mode, draw decommissioned static banner
     if (!isAlive) {
-      _paintDestroyedHemisphere(canvas, laneLeft, laneRight, size.height, fgColor);
+      _paintDestroyedHemisphere(
+        canvas,
+        laneLeft,
+        laneRight,
+        size.height,
+        fgColor,
+      );
     }
   }
 
-  void _paintDestroyedHemisphere(Canvas canvas, double laneLeft, double laneRight, double height, Color fgColor) {
+  void _paintDestroyedHemisphere(
+    Canvas canvas,
+    double laneLeft,
+    double laneRight,
+    double height,
+    Color fgColor,
+  ) {
     final Rect rect = Rect.fromLTWH(laneLeft, 0, laneRight - laneLeft, height);
-    final Paint darkOverlay = Paint()..color = Colors.black.withOpacity(0.65);
+    final Paint darkOverlay = Paint()
+      ..color = Colors.black.withOpacity(0.65);
     canvas.drawRect(rect, darkOverlay);
 
     // Hazard stripes
@@ -222,7 +248,11 @@ class MasterGamePainter extends CustomPainter {
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke;
     for (double y = -100; y < height + 100; y += 40) {
-      canvas.drawLine(Offset(laneLeft, y), Offset(laneRight, y + 40), stripePaint);
+      canvas.drawLine(
+        Offset(laneLeft, y),
+        Offset(laneRight, y + 40),
+        stripePaint,
+      );
     }
 
     final tp = TextPainter(
@@ -243,7 +273,10 @@ class MasterGamePainter extends CustomPainter {
 
     tp.paint(
       canvas,
-      Offset((laneLeft + laneRight) / 2.0 - tp.width / 2.0, height * 0.5 - tp.height / 2.0),
+      Offset(
+        (laneLeft + laneRight) / 2.0 - tp.width / 2.0,
+        height * 0.5 - tp.height / 2.0,
+      ),
     );
   }
 
@@ -261,7 +294,11 @@ class MasterGamePainter extends CustomPainter {
       if (p.sides == 2) {
         // Spark line
         _particleLinePaint.color = c;
-        canvas.drawLine(Offset(-p.size, 0), Offset(p.size, 0), _particleLinePaint);
+        canvas.drawLine(
+          Offset(-p.size, 0),
+          Offset(p.size, 0),
+          _particleLinePaint,
+        );
       } else if (p.sides == 3) {
         // Procedural triangle
         _particleFillPaint.color = c;

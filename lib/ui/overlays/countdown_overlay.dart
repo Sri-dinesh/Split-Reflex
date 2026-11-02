@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/constants/palette.dart';
 import '../../engine/game_controller.dart';
 
@@ -11,7 +12,8 @@ class CountdownOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final double remaining = controller.countdownTimer;
     final int displayNum = remaining.ceil().clamp(1, 3);
-    final double frac = remaining - (displayNum - 1); // 0.0 -> 1.0 within this second
+    final double frac =
+        remaining - (displayNum - 1); // 0.0 -> 1.0 within this second
     final double scale = 0.8 + 0.5 * (frac.clamp(0.0, 1.0));
     final double opacity = (frac.clamp(0.0, 1.0)).clamp(0.2, 1.0);
 
@@ -28,7 +30,10 @@ class CountdownOverlay extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white10,
                   borderRadius: BorderRadius.circular(4),
@@ -56,10 +61,14 @@ class CountdownOverlay extends StatelessWidget {
                       fontFamily: 'monospace',
                       fontSize: 84,
                       fontWeight: FontWeight.w900,
-                      color: displayNum == 1 ? SplitPalette.hazardCrimson : SplitPalette.nearMissCyan,
+                      color: displayNum == 1
+                          ? SplitPalette.hazardCrimson
+                          : SplitPalette.nearMissCyan,
                       shadows: [
                         Shadow(
-                          color: displayNum == 1 ? SplitPalette.hazardCrimson : SplitPalette.nearMissCyan,
+                          color: displayNum == 1
+                              ? SplitPalette.hazardCrimson
+                              : SplitPalette.nearMissCyan,
                           blurRadius: 30,
                         ),
                       ],

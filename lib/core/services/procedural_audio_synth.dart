@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
+
 import 'package:audioplayers/audioplayers.dart';
 
 /// In-memory procedural audio synthesizer producing 16-bit PCM WAV byte buffers.
@@ -24,40 +25,59 @@ class ProceduralAudioSynth {
   AudioPlayer? _sfxPlayer2;
   AudioPlayer? _deathPlayer;
   bool _playerToggle = false;
-  bool _initialized = false;
+  bool _buffersReady = false;
   bool soundEnabled = true;
 
   Future<void> init() async {
-    if (_initialized) return;
-
-    // Synthesize all audio buffers in memory (< 15ms total CPU time)
-    tapWav = _generateTapWav();
-    nearMissWav = _generateNearMissWav();
-    swapTickWav = _generateSwapTickWav();
-    swapExecuteWav = _generateSwapExecuteWav();
-    deathShatterWav = _generateDeathShatterWav();
-    chargeHumWav = _generateChargeHumWav();
-    warpWav = _generateWarpWav();
-    shieldPingWav = _generateShieldPingWav();
-    phaseAbsorbWav = _generatePhaseAbsorbWav();
-
-    if (soundEnabled) {
-      try {
-        _sfxPlayer1 = AudioPlayer();
-        _sfxPlayer2 = AudioPlayer();
-        _deathPlayer = AudioPlayer();
-        await _sfxPlayer1?.setReleaseMode(ReleaseMode.stop);
-        await _sfxPlayer2?.setReleaseMode(ReleaseMode.stop);
-        await _deathPlayer?.setReleaseMode(ReleaseMode.stop);
-      } catch (_) {}
+    if (!_buffersReady) {
+      // Synthesize all audio buffers in memory (< 15ms total CPU time)
+      tapWav = _generateTapWav();
+      nearMissWav = _generateNearMissWav();
+      swapTickWav = _generateSwapTickWav();
+      swapExecuteWav = _generateSwapExecuteWav();
+      deathShatterWav = _generateDeathShatterWav();
+      chargeHumWav = _generateChargeHumWav();
+      warpWav = _generateWarpWav();
+      shieldPingWav = _generateShieldPingWav();
+      phaseAbsorbWav = _generatePhaseAbsorbWav();
+      _buffersReady = true;
     }
 
-    _initialized = true;
+    if (soundEnabled) {
+      await _ensurePlayers();
+    }
   }
+
+  Future<void> _ensurePlayers() async {
+    if (_sfxPlayer1 != null && _sfxPlayer2 != null && _deathPlayer != null) {
+      return;
+    }
+    try {
+      _sfxPlayer1 ??= AudioPlayer();
+      _sfxPlayer2 ??= AudioPlayer();
+      _deathPlayer ??= AudioPlayer();
+      await _sfxPlayer1?.setReleaseMode(ReleaseMode.stop);
+      await _sfxPlayer2?.setReleaseMode(ReleaseMode.stop);
+      await _deathPlayer?.setReleaseMode(ReleaseMode.stop);
+    } catch (_) {
+      // Audio is a nice-to-have; never let a platform failure break gameplay.
+    }
+  }
+
+  /// Enables or disables all sound. Turning sound back on lazily rebuilds the
+  /// native players if they were released when the game view was destroyed.
+  Future<void> setSoundEnabled(bool enabled) async {
+    soundEnabled = enabled;
+    if (enabled) {
+      await init();
+    }
+  }
+
+  bool get _ready => soundEnabled && _buffersReady && _sfxPlayer1 != null;
 
   int _lastTapTime = 0;
   void playTap() {
-    if (!soundEnabled || !_initialized) return;
+    if (!_ready) return;
     final int now = DateTime.now().millisecondsSinceEpoch;
     if (now - _lastTapTime < 80) return;
     _lastTapTime = now;
@@ -65,45 +85,47 @@ class ProceduralAudioSynth {
   }
 
   void playNearMiss() {
-    if (!soundEnabled || !_initialized) return;
+    if (!_ready) return;
     _playOnAvailablePlayer(nearMissWav, volume: 0.9);
   }
 
   void playSwapTick({bool isFinal = false}) {
-    if (!soundEnabled || !_initialized) return;
+    if (!_ready) return;
     _playOnAvailablePlayer(swapTickWav, volume: 0.85);
   }
 
   void playSwapExecute() {
-    if (!soundEnabled || !_initialized) return;
+    if (!_ready) return;
     _playOnAvailablePlayer(swapExecuteWav, volume: 1.0);
   }
 
   void playDeath() {
-    if (!soundEnabled || !_initialized) return;
+    if (!_ready) return;
     try {
       _deathPlayer?.stop().catchError((_) {});
-      _deathPlayer?.play(BytesSource(deathShatterWav), volume: 1.0).catchError((_) {});
+      _deathPlayer
+          ?.play(BytesSource(deathShatterWav), volume: 1.0)
+          .catchError((_) {});
     } catch (_) {}
   }
 
   void playChargeHum() {
-    if (!soundEnabled || !_initialized) return;
+    if (!_ready) return;
     _playOnAvailablePlayer(chargeHumWav, volume: 0.5);
   }
 
   void playWarp() {
-    if (!soundEnabled || !_initialized) return;
+    if (!_ready) return;
     _playOnAvailablePlayer(warpWav, volume: 0.75);
   }
 
   void playShieldPing() {
-    if (!soundEnabled || !_initialized) return;
+    if (!_ready) return;
     _playOnAvailablePlayer(shieldPingWav, volume: 0.85);
   }
 
   void playPhaseAbsorb() {
-    if (!soundEnabled || !_initialized) return;
+    if (!_ready) return;
     _playOnAvailablePlayer(phaseAbsorbWav, volume: 0.80);
   }
 
@@ -148,8 +170,10 @@ class ProceduralAudioSynth {
       // Simple one-pole bandpass/lowpass simulation
       filterState += 0.25 * (rawNoise - filterState);
 
-      final double chime = math.sin(2.0 * math.pi * 880.0 * t) * math.exp(-35.0 * t);
-      final double whoosh = filterState * math.sin(math.pi * (t / duration)) * 0.7;
+      final double chime =
+          math.sin(2.0 * math.pi * 880.0 * t) * math.exp(-35.0 * t);
+      final double whoosh =
+          filterState * math.sin(math.pi * (t / duration)) * 0.7;
 
       samples[i] = (chime * 0.6 + whoosh * 0.4);
     }
@@ -220,7 +244,8 @@ class ProceduralAudioSynth {
     for (int i = 0; i < numSamples; i++) {
       final double t = i / sampleRate;
       final double freq = 120.0 + 260.0 * (t / duration);
-      final double env = math.min(1.0, t / 0.1) * (1.0 - math.exp(-5.0 * (duration - t)));
+      final double env =
+          math.min(1.0, t / 0.1) * (1.0 - math.exp(-5.0 * (duration - t)));
       final double osc1 = math.sin(2.0 * math.pi * freq * t);
       final double osc2 = math.sin(2.0 * math.pi * (freq * 1.5) * t) * 0.5;
 
@@ -280,9 +305,13 @@ class ProceduralAudioSynth {
   }
 
   /// Encodes a normalized sample list [-1.0, 1.0] into a valid 16-bit mono PCM RIFF/WAVE header and data block.
-  static Uint8List buildWavBytes(List<double> samples, {int sampleRate = 44100}) {
+  static Uint8List buildWavBytes(
+    List<double> samples, {
+    int sampleRate = 44100,
+  }) {
     final int numSamples = samples.length;
-    final int byteRate = sampleRate * 2; // 16 bits = 2 bytes per sample, 1 channel
+    final int byteRate =
+        sampleRate * 2; // 16 bits = 2 bytes per sample, 1 channel
     final int dataSize = numSamples * 2;
     final int totalSize = 36 + dataSize;
 
@@ -298,8 +327,8 @@ class ProceduralAudioSynth {
     byteData.setUint32(4, totalSize, Endian.little);
 
     // Format "WAVE"
-    byteData.setUint8(8, 0x57);  // 'W'
-    byteData.setUint8(9, 0x41);  // 'A'
+    byteData.setUint8(8, 0x57); // 'W'
+    byteData.setUint8(9, 0x41); // 'A'
     byteData.setUint8(10, 0x56); // 'V'
     byteData.setUint8(11, 0x45); // 'E'
 
@@ -345,9 +374,25 @@ class ProceduralAudioSynth {
     return byteData.buffer.asUint8List();
   }
 
+  /// Disposes the native players but keeps the synthesised buffers so a later
+  /// [init] can rebuild playback without re-synthesising.
+  Future<void> releasePlayers() async {
+    final AudioPlayer? p1 = _sfxPlayer1;
+    final AudioPlayer? p2 = _sfxPlayer2;
+    final AudioPlayer? death = _deathPlayer;
+    _sfxPlayer1 = null;
+    _sfxPlayer2 = null;
+    _deathPlayer = null;
+    try {
+      await p1?.dispose();
+      await p2?.dispose();
+      await death?.dispose();
+    } catch (_) {
+      // Nothing to recover from: the players are already gone.
+    }
+  }
+
   void dispose() {
-    _sfxPlayer1?.dispose();
-    _sfxPlayer2?.dispose();
-    _deathPlayer?.dispose();
+    releasePlayers();
   }
 }

@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../../core/constants/physics_constants.dart';
 
 class OrbEntity {
@@ -10,7 +12,10 @@ class OrbEntity {
   double squashTimer = 0.0;
   double corePulseTime = 0.0;
 
-  final List<Offset> trail = List.filled(PhysicsConstants.orbTrailLength, Offset.zero);
+  final List<Offset> trail = List.filled(
+    PhysicsConstants.orbTrailLength,
+    Offset.zero,
+  );
   int _trailHead = 0;
 
   void reset({required double initialX, required double initialY}) {
@@ -27,7 +32,9 @@ class OrbEntity {
   }
 
   void thrust({required bool inverted}) {
-    vy = inverted ? -PhysicsConstants.orbJumpImpulse : PhysicsConstants.orbJumpImpulse;
+    vy = inverted
+        ? -PhysicsConstants.orbJumpImpulse
+        : PhysicsConstants.orbJumpImpulse;
     squashTimer = PhysicsConstants.orbSquashDuration;
   }
 

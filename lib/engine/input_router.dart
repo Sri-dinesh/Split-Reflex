@@ -68,7 +68,8 @@ class InputRouter {
   void handlePointerMove({
     required PointerMoveEvent event,
     required double splitX,
-    required void Function(bool isLeft, double deltaX, Offset localPosition) onPointerMove,
+    required void Function(bool isLeft, double deltaX, Offset localPosition)
+    onPointerMove,
   }) {
     final Offset prevPos = _lastPositions[event.pointer] ?? event.localPosition;
     final double deltaX = event.localPosition.dx - prevPos.dx;
