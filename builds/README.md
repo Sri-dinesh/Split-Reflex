@@ -8,7 +8,7 @@ This folder contains the signed, production-ready **Android App Bundle (.aab)** 
 
 | File | Description | Size |
 |---|---|---|
-| `SplitReflex-v1.0.0+2-release.aab` | Versioned release bundle ready for Google Play Console | ~23.7 MB |
+| `SplitReflex-v1.0.0+3-release.aab` | Versioned release bundle ready for Google Play Console | ~23.7 MB |
 | `app-release.aab` | Canonical release bundle ready for Google Play Console | ~23.7 MB |
 
 ---
@@ -40,8 +40,8 @@ These URLs are integrated directly into the in-app menu and must be entered in t
 
 - **Package / Application ID**: `com.splitreflex.game`
 - **Version Name**: `1.0.0`
-- **Version Code**: `2`
-- **Target SDK**: `35` (Android 15 — exceeds minimum Google Play target requirements)
+- **Version Code**: `3`
+- **Target SDK**: `36` (Android 16 — satisfies Google Play target API 36 requirement)
 - **Min SDK**: `24` (Android 7.0 Nougat — satisfies Play automatic protection)
 - **Permissions**: `android.permission.VIBRATE` only (zero sensitive permissions)
 - **R8 / Minification**: Enabled (`minifyEnabled true`, `shrinkResources true`)
