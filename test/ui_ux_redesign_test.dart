@@ -147,7 +147,7 @@ void main() {
           reason: 'Must display original app icon above app name',
         );
         expect(find.text('Classic'), findsOneWidget);
-        expect(find.text('Phase Flux'), findsOneWidget);
+        expect(find.text('Breach Pong'), findsOneWidget);
         expect(find.text('Pulse Reflex'), findsOneWidget);
         expect(find.text('Start Run'), findsOneWidget);
 

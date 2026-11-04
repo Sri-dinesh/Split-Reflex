@@ -13,11 +13,10 @@ import '../core/services/preferences_service.dart';
 import '../core/services/procedural_audio_synth.dart';
 import '../core/utils/seeded_rng.dart';
 import 'entities/dart_entity.dart';
+import 'entities/dimension_breach_entity.dart';
 import 'entities/obstacle_entity.dart';
 import 'entities/orb_entity.dart';
 import 'entities/particle_pool.dart';
-import 'entities/phase_flux_entity.dart';
-import 'entities/slalom_drift_entity.dart';
 import 'entities/shield_ping_entity.dart';
 import 'entities/quantum_warp_entity.dart';
 import 'hemisphere_state.dart';
@@ -60,7 +59,7 @@ class DeathAutopsy {
 
 enum GamePairMode {
   classic, // Left: Orb (Thrust) | Right: Dart (Steer)
-  phaseFlux, // Left: Phase Core (Flip Polarity) | Right: Slalom (Drift)
+  dimensionBreach, // Zero-G Membrane Ping-Pong (Left: Anti-G | Right: Heavy-G)
   pulseReflex, // Left: Shield (Ping Deflect) | Right: Quantum (Warp Rails)
 }
 
@@ -181,11 +180,8 @@ class GameController extends ChangeNotifier {
   final List<LaserGate> laserGates = [];
   final List<Monolith> monoliths = [];
 
-  // Pair 2: Phase Flux
-  final PhaseCoreEntity phaseCore = PhaseCoreEntity();
-  final SlalomDriftEntity slalomDrift = SlalomDriftEntity();
-  final List<PolarityWall> polarityWalls = [];
-  final List<SlalomPylon> slalomPylons = [];
+  // Pair 2: Dimension Breach (Zero-G Membrane Ping-Pong)
+  final DimensionBreachEntity dimensionBreach = DimensionBreachEntity();
 
   // Pair 3: Pulse Reflex
   final ShieldPingEntity shieldPing = ShieldPingEntity();
@@ -207,11 +203,11 @@ class GameController extends ChangeNotifier {
   bool isMechanicAlive(HemisphereMechanic mechanic) {
     switch (mechanic) {
       case HemisphereMechanic.orb:
-      case HemisphereMechanic.phaseCore:
+      case HemisphereMechanic.breachAlpha:
       case HemisphereMechanic.shieldPing:
         return orbAlive;
       case HemisphereMechanic.dart:
-      case HemisphereMechanic.slalomDrift:
+      case HemisphereMechanic.breachBeta:
       case HemisphereMechanic.quantumWarp:
         return dartAlive;
     }
@@ -223,6 +219,7 @@ class GameController extends ChangeNotifier {
   int nearMissCount = 0;
   double phaseMultiplier = 1.0;
   double lastMutationTimestamp = 0.0;
+  double get speedScale => survivalTime >= 45.0 ? 1.35 : 1.0;
 
   // Battery status cached for rendering
   BatteryTelemetryState batteryState = const BatteryTelemetryState(
@@ -262,12 +259,23 @@ class GameController extends ChangeNotifier {
   }
 
   void setPlayMode(PlayHandMode mode) {
+    if (gamePairMode == GamePairMode.dimensionBreach &&
+        mode == PlayHandMode.oneHand) {
+      // 1-Hand mode is disabled for Dimension Breach (Dual paddles require 2 hands)
+      return;
+    }
     playMode = mode;
     PreferencesService.instance.setPlayMode(mode.name).ignore();
     notifyListeners();
   }
 
   void togglePlayMode() {
+    if (gamePairMode == GamePairMode.dimensionBreach) {
+      // Dimension Breach is strictly 2-Hands dual paddle control
+      ProceduralAudioSynth.instance.playTap();
+      HapticChoreographer.instance.triggerTap();
+      return;
+    }
     playMode = playMode == PlayHandMode.twoHands
         ? PlayHandMode.oneHand
         : PlayHandMode.twoHands;
@@ -329,6 +337,10 @@ class GameController extends ChangeNotifier {
 
   void setGamePairMode(GamePairMode mode) {
     gamePairMode = mode;
+    if (mode == GamePairMode.dimensionBreach && playMode == PlayHandMode.oneHand) {
+      playMode = PlayHandMode.twoHands;
+      PreferencesService.instance.setPlayMode(playMode.name).ignore();
+    }
     PreferencesService.instance.setPairMode(mode.name).ignore();
     _initAttractMode();
     ProceduralAudioSynth.instance.playTap();
@@ -340,6 +352,10 @@ class GameController extends ChangeNotifier {
     final values = GamePairMode.values;
     final nextIndex = (values.indexOf(gamePairMode) + 1) % values.length;
     gamePairMode = values[nextIndex];
+    if (gamePairMode == GamePairMode.dimensionBreach && playMode == PlayHandMode.oneHand) {
+      playMode = PlayHandMode.twoHands;
+      PreferencesService.instance.setPlayMode(playMode.name).ignore();
+    }
     _initAttractMode();
     ProceduralAudioSynth.instance.playTap();
     HapticChoreographer.instance.triggerTap();
@@ -360,9 +376,9 @@ class GameController extends ChangeNotifier {
         leftMech = HemisphereMechanic.orb;
         rightMech = HemisphereMechanic.dart;
         break;
-      case GamePairMode.phaseFlux:
-        leftMech = HemisphereMechanic.phaseCore;
-        rightMech = HemisphereMechanic.slalomDrift;
+      case GamePairMode.dimensionBreach:
+        leftMech = HemisphereMechanic.breachAlpha;
+        rightMech = HemisphereMechanic.breachBeta;
         break;
       case GamePairMode.pulseReflex:
         leftMech = HemisphereMechanic.shieldPing;
@@ -386,10 +402,9 @@ class GameController extends ChangeNotifier {
     // Clear obstacles
     laserGates.clear();
     monoliths.clear();
-    polarityWalls.clear();
-    slalomPylons.clear();
     plasmaBolts.clear();
     quantumBlockades.clear();
+    dimensionBreach.mines.clear();
 
     final double leftLaneLeft = hemisphereState.getLaneLeft(
       leftMech,
@@ -419,14 +434,12 @@ class GameController extends ChangeNotifier {
     );
     _rollingSafeCorridorX = dart.x;
 
-    // Init Pair 2
-    phaseCore.reset(
-      initialX: (leftLaneLeft + leftLaneRight) / 2.0,
-      initialY: screenHeight * 0.65,
-    );
-    slalomDrift.reset(
-      initialX: (rightLaneLeft + rightLaneRight) / 2.0,
-      initialY: screenHeight * 0.70,
+    // Init Pair 2: Dimension Breach Ping-Pong
+    dimensionBreach.reset(
+      initialLeftX: leftLaneLeft + 26.0,
+      initialRightX: rightLaneRight - 26.0,
+      splitX: hemisphereState.rawSplitPixels,
+      screenHeight: screenHeight,
     );
 
     // Init Pair 3
@@ -473,6 +486,10 @@ class GameController extends ChangeNotifier {
     deathZoom = 1.0;
     latestAutopsy = null;
     holdProgress = 0.0;
+
+    if (gamePairMode == GamePairMode.dimensionBreach) {
+      playMode = PlayHandMode.twoHands;
+    }
 
     _initAttractMode();
     HapticChoreographer.instance.triggerSwapExecute();
@@ -671,55 +688,64 @@ class GameController extends ChangeNotifier {
           inverted: hemisphereState.isPolarityInverted,
         );
       }
-    } else if (gamePairMode == GamePairMode.phaseFlux) {
-      // Pair 2: Phase Core & Slalom Drift
-      final double pLeft = hemisphereState.getLaneLeft(
-        HemisphereMechanic.phaseCore,
+    } else if (gamePairMode == GamePairMode.dimensionBreach) {
+      // Pair 2: Dimension Breach Ping-Pong
+      final double lLeft = hemisphereState.getLaneLeft(
+        hemisphereState.leftMechanic,
         screenWidth,
       );
-      final double pRight = hemisphereState.getLaneRight(
-        HemisphereMechanic.phaseCore,
+      final double lRight = hemisphereState.getLaneRight(
+        hemisphereState.leftMechanic,
         screenWidth,
       );
-      if (orbAlive) {
-        phaseCore.update(dt, (pLeft + pRight) / 2.0, screenHeight * 0.65);
-      }
+      final double rLeft = hemisphereState.getLaneLeft(
+        hemisphereState.rightMechanic,
+        screenWidth,
+      );
+      final double rRight = hemisphereState.getLaneRight(
+        hemisphereState.rightMechanic,
+        screenWidth,
+      );
 
-      final double sLeft = hemisphereState.getLaneLeft(
-        HemisphereMechanic.slalomDrift,
-        screenWidth,
-      );
-      final double sRight = hemisphereState.getLaneRight(
-        HemisphereMechanic.slalomDrift,
-        screenWidth,
-      );
-      if (dartAlive) {
-        if (controlMode == ControlMode.gyroTilt) {
-          final double alpha = 1.0 - math.exp(-26.0 * dt);
-          _filteredGyroTiltX =
-              ui.lerpDouble(_filteredGyroTiltX, _rawGyroTiltX, alpha) ??
-              _rawGyroTiltX;
-          const double tiltRange = 3.0;
-          final double normalized = (_filteredGyroTiltX / tiltRange).clamp(
-            -1.0,
-            1.0,
-          );
-          final double midX = (sLeft + sRight) / 2.0;
-          final double halfW = (sRight - sLeft) / 2.0 - 16.0;
-          slalomDrift.targetX = (midX + normalized * halfW).clamp(
-            sLeft + 16.0,
-            sRight - 16.0,
+      // Gyro tilt support: tilt shifts paddle vertical bias
+      if (controlMode == ControlMode.gyroTilt) {
+        final double alpha = 1.0 - math.exp(-26.0 * dt);
+        _filteredGyroTiltX =
+            ui.lerpDouble(_filteredGyroTiltX, _rawGyroTiltX, alpha) ??
+            _rawGyroTiltX;
+        final double gyroOffset = (_filteredGyroTiltX * 80.0).clamp(-140.0, 140.0);
+        if (dartAlive) {
+          dimensionBreach.paddleRightTargetY = (dimensionBreach.paddleRightTargetY + gyroOffset * dt).clamp(
+            80.0,
+            screenHeight - 80.0,
           );
         }
-
-        slalomDrift.update(
-          dt: dt,
-          laneLeft: sLeft,
-          laneRight: sRight,
-          screenHeight: screenHeight,
-          isGyro: controlMode == ControlMode.gyroTilt,
-        );
       }
+
+      final bool isLeftAlpha =
+          hemisphereState.leftMechanic == HemisphereMechanic.breachAlpha;
+      final bool isLeftAlive = isMechanicAlive(hemisphereState.leftMechanic);
+      final bool isRightAlive = isMechanicAlive(hemisphereState.rightMechanic);
+
+      final List<BreachEvent> breachEvents = dimensionBreach.update(
+        dt: dt,
+        screenWidth: screenWidth,
+        screenHeight: screenHeight,
+        splitX: hemisphereState.rawSplitPixels,
+        leftLaneLeft: lLeft,
+        leftLaneRight: lRight,
+        rightLaneLeft: rLeft,
+        rightLaneRight: rRight,
+        speedScale: speedScale,
+        survivalTime: survivalTime,
+        isLeftAlive: isLeftAlive,
+        isRightAlive: isRightAlive,
+        inverted: hemisphereState.isPolarityInverted,
+        isLeftAlpha: isLeftAlpha,
+        isPostSwapGrace: _postSwapGraceTimer > 0.0,
+      );
+
+      _processBreachEvents(breachEvents);
     } else if (gamePairMode == GamePairMode.pulseReflex) {
       // Pair 3: Shield Ping & Quantum Warp
       if (orbAlive) {
@@ -784,34 +810,43 @@ class GameController extends ChangeNotifier {
           ((dartLeft + dartRight) / 2.0) +
           40.0 * math.sin(_attractAnimTime * 1.8);
       dart.railY = screenHeight * PhysicsConstants.dartDefaultRailYFactor;
-    } else if (gamePairMode == GamePairMode.phaseFlux) {
-      final double coreLeft = hemisphereState.getLaneLeft(
-        HemisphereMechanic.phaseCore,
+    } else if (gamePairMode == GamePairMode.dimensionBreach) {
+      final double lLeft = hemisphereState.getLaneLeft(
+        hemisphereState.leftMechanic,
         screenWidth,
       );
-      final double coreRight = hemisphereState.getLaneRight(
-        HemisphereMechanic.phaseCore,
+      final double lRight = hemisphereState.getLaneRight(
+        hemisphereState.leftMechanic,
         screenWidth,
       );
-      final double coreMid = (coreLeft + coreRight) / 2.0;
-      phaseCore.update(dt, coreMid, screenHeight * 0.70);
+      final double rLeft = hemisphereState.getLaneLeft(
+        hemisphereState.rightMechanic,
+        screenWidth,
+      );
+      final double rRight = hemisphereState.getLaneRight(
+        hemisphereState.rightMechanic,
+        screenWidth,
+      );
 
-      final double slalomLeft = hemisphereState.getLaneLeft(
-        HemisphereMechanic.slalomDrift,
-        screenWidth,
-      );
-      final double slalomRight = hemisphereState.getLaneRight(
-        HemisphereMechanic.slalomDrift,
-        screenWidth,
-      );
-      final double slalomMid = (slalomLeft + slalomRight) / 2.0;
-      slalomDrift.targetX = slalomMid + 25.0 * math.sin(_attractAnimTime * 2.0);
-      slalomDrift.update(
+      // AI auto-tracks the ball in attract mode
+      dimensionBreach.paddleLeftTargetY = dimensionBreach.ballY;
+      dimensionBreach.paddleRightTargetY = dimensionBreach.ballY;
+      dimensionBreach.update(
         dt: dt,
-        laneLeft: slalomLeft,
-        laneRight: slalomRight,
+        screenWidth: screenWidth,
         screenHeight: screenHeight,
-        isGyro: false,
+        splitX: hemisphereState.rawSplitPixels,
+        leftLaneLeft: lLeft,
+        leftLaneRight: lRight,
+        rightLaneLeft: rLeft,
+        rightLaneRight: rRight,
+        speedScale: 0.9,
+        survivalTime: 99.0,
+        isLeftAlive: true,
+        isRightAlive: true,
+        inverted: false,
+        isLeftAlpha: true,
+        isPostSwapGrace: false,
       );
     } else if (gamePairMode == GamePairMode.pulseReflex) {
       shieldPing.y = screenHeight * 0.75;
@@ -888,33 +923,11 @@ class GameController extends ChangeNotifier {
       );
       dart.x = (dartLeft + dartRight) / 2.0;
       dart.railY = screenHeight * PhysicsConstants.dartDefaultRailYFactor;
-    } else if (gamePairMode == GamePairMode.phaseFlux) {
-      final double coreLeft = hemisphereState.getLaneLeft(
-        HemisphereMechanic.phaseCore,
-        screenWidth,
-      );
-      final double coreRight = hemisphereState.getLaneRight(
-        HemisphereMechanic.phaseCore,
-        screenWidth,
-      );
-      phaseCore.update(dt, (coreLeft + coreRight) / 2.0, screenHeight * 0.70);
-
-      final double slalomLeft = hemisphereState.getLaneLeft(
-        HemisphereMechanic.slalomDrift,
-        screenWidth,
-      );
-      final double slalomRight = hemisphereState.getLaneRight(
-        HemisphereMechanic.slalomDrift,
-        screenWidth,
-      );
-      slalomDrift.targetX = (slalomLeft + slalomRight) / 2.0;
-      slalomDrift.update(
-        dt: dt,
-        laneLeft: slalomLeft,
-        laneRight: slalomRight,
-        screenHeight: screenHeight,
-        isGyro: false,
-      );
+    } else if (gamePairMode == GamePairMode.dimensionBreach) {
+      dimensionBreach.paddleLeftY = screenHeight * 0.5;
+      dimensionBreach.paddleLeftTargetY = screenHeight * 0.5;
+      dimensionBreach.paddleRightY = screenHeight * 0.5;
+      dimensionBreach.paddleRightTargetY = screenHeight * 0.5;
     } else if (gamePairMode == GamePairMode.pulseReflex) {
       shieldPing.y = screenHeight * 0.75;
       shieldPing.update(dt);
@@ -969,10 +982,9 @@ class GameController extends ChangeNotifier {
     // Clear active obstacles on swap to prevent unfair instant collisions across all modes
     laserGates.clear();
     monoliths.clear();
-    polarityWalls.clear();
-    slalomPylons.clear();
     plasmaBolts.clear();
     quantumBlockades.clear();
+    dimensionBreach.mines.clear();
 
     // Cross-translate Pair 1 (Classic)
     final double newOrbLeft = hemisphereState.getLaneLeft(
@@ -996,34 +1008,6 @@ class GameController extends ChangeNotifier {
     dart.x = (newDartLeft + newDartRight) / 2.0;
     dart.targetX = dart.x;
     _rollingSafeCorridorX = dart.x;
-
-    // Cross-translate Pair 2 (Phase Flux)
-    final double newPhaseLeft = hemisphereState.getLaneLeft(
-      HemisphereMechanic.phaseCore,
-      screenWidth,
-    );
-    final double newPhaseRight = hemisphereState.getLaneRight(
-      HemisphereMechanic.phaseCore,
-      screenWidth,
-    );
-    phaseCore.x = (newPhaseLeft + newPhaseRight) / 2.0;
-
-    final double newSlalomLeft = hemisphereState.getLaneLeft(
-      HemisphereMechanic.slalomDrift,
-      screenWidth,
-    );
-    final double newSlalomRight = hemisphereState.getLaneRight(
-      HemisphereMechanic.slalomDrift,
-      screenWidth,
-    );
-    final double introFactor = (survivalTime / 3.5).clamp(0.0, 1.0);
-    slalomDrift.x = slalomDrift.getChasmCenter(
-      slalomDrift.y,
-      newSlalomLeft,
-      newSlalomRight,
-      introFactor: introFactor,
-    );
-    slalomDrift.targetX = slalomDrift.x;
 
     // Cross-translate Pair 3 (Pulse Reflex)
     final double newQLeft = hemisphereState.getLaneLeft(
@@ -1178,74 +1162,8 @@ class GameController extends ChangeNotifier {
       } else {
         monoliths.clear();
       }
-    } else if (gamePairMode == GamePairMode.phaseFlux) {
-      // Pair 2: Polarity Walls & Slalom Pylons
-      if (orbAlive) {
-        _laserSpawnTimer += dt;
-        if (_laserSpawnTimer >= 1.6) {
-          _laserSpawnTimer = 0.0;
-          final PolarityColor pColor = rng.nextDouble() > 0.5
-              ? PolarityColor.cyan
-              : PolarityColor.crimson;
-          polarityWalls.add(
-            PolarityWall(y: -30.0, color: pColor, speed: 210.0 * speedScale),
-          );
-        }
-
-        for (int i = polarityWalls.length - 1; i >= 0; i--) {
-          final w = polarityWalls[i];
-          w.y += w.speed * dt;
-          if (w.y > screenHeight + 40) {
-            polarityWalls.removeAt(i);
-          }
-        }
-      } else {
-        polarityWalls.clear();
-      }
-
-      if (dartAlive) {
-        _monolithSpawnTimer += dt;
-        if (_monolithSpawnTimer >= 1.4) {
-          _monolithSpawnTimer = 0.0;
-          final double sLeft = hemisphereState.getLaneLeft(
-            HemisphereMechanic.slalomDrift,
-            screenWidth,
-          );
-          final double sRight = hemisphereState.getLaneRight(
-            HemisphereMechanic.slalomDrift,
-            screenWidth,
-          );
-          final double introFactor = ((survivalTime - 3.5) / 3.5).clamp(
-            0.0,
-            1.0,
-          );
-          final double chasmCenter = slalomDrift.getChasmCenter(
-            0.0,
-            sLeft,
-            sRight,
-            introFactor: introFactor,
-          );
-          final double offset = (rng.nextDouble() - 0.5) * 40.0;
-
-          slalomPylons.add(
-            SlalomPylon(
-              x: (chasmCenter + offset).clamp(sLeft + 20.0, sRight - 20.0),
-              y: -30.0,
-              speed: 220.0 * speedScale,
-            ),
-          );
-        }
-
-        for (int i = slalomPylons.length - 1; i >= 0; i--) {
-          final p = slalomPylons[i];
-          p.y += p.speed * dt;
-          if (p.y > screenHeight + 40) {
-            slalomPylons.removeAt(i);
-          }
-        }
-      } else {
-        slalomPylons.clear();
-      }
+    } else if (gamePairMode == GamePairMode.dimensionBreach) {
+      // Dimension Breach manages its own floating hazard mines and ball physics
     } else if (gamePairMode == GamePairMode.pulseReflex) {
       // Pair 3: Plasma Bolts & Quantum Blockades
       if (orbAlive) {
@@ -1358,111 +1276,8 @@ class GameController extends ChangeNotifier {
           }
         }
       }
-    } else if (gamePairMode == GamePairMode.phaseFlux) {
-      // Pair 2 Collisions
-      if (orbAlive) {
-        for (final w in polarityWalls) {
-          if (w.absorbed) continue;
-          final double coreTop = phaseCore.y - 18.0;
-          final double coreBottom = phaseCore.y + 18.0;
-          final double wallTop = w.y;
-          final double wallBottom = w.y + w.height;
-
-          // Check vertical intersection
-          if (wallBottom >= coreTop && wallTop <= coreBottom) {
-            if (w.color == phaseCore.polarity) {
-              // Absorbed successfully!
-              w.absorbed = true;
-              currentScore += 50.0 * batteryState.scoreMultiplier;
-              ProceduralAudioSynth.instance.playPhaseAbsorb();
-              particlePool.spawnBurst(
-                origin: Offset(phaseCore.x, phaseCore.y),
-                count: 14,
-                color: phaseCore.currentColor,
-                speed: 180.0,
-              );
-            } else {
-              // Wrong color collision -> failure
-              _handleHemisphereFailure(
-                failedHemisphere:
-                    hemisphereState.leftMechanic == HemisphereMechanic.phaseCore
-                    ? 'LEFT'
-                    : 'RIGHT',
-                failedMechanic: 'PHASE CORE',
-                impactPoint: Offset(phaseCore.x, phaseCore.y),
-              );
-              return;
-            }
-          } else if (wallTop > coreBottom && !w.absorbed) {
-            // Breached defense without absorption
-            _handleHemisphereFailure(
-              failedHemisphere:
-                  hemisphereState.leftMechanic == HemisphereMechanic.phaseCore
-                  ? 'LEFT'
-                  : 'RIGHT',
-              failedMechanic: 'PHASE CORE',
-              impactPoint: Offset(phaseCore.x, phaseCore.y),
-            );
-            return;
-          }
-        }
-      }
-
-      if (dartAlive) {
-        final double sLeft = hemisphereState.getLaneLeft(
-          HemisphereMechanic.slalomDrift,
-          screenWidth,
-        );
-        final double sRight = hemisphereState.getLaneRight(
-          HemisphereMechanic.slalomDrift,
-          screenWidth,
-        );
-        final double laneW = sRight - sLeft;
-        final double introFactor = ((survivalTime - 3.5) / 3.5).clamp(0.0, 1.0);
-        final double center = slalomDrift.getChasmCenter(
-          slalomDrift.y,
-          sLeft,
-          sRight,
-          introFactor: introFactor,
-        );
-        final double chasmW = slalomDrift.getChasmWidth(
-          laneW,
-          introFactor: introFactor,
-        );
-
-        // Slalom boundary collision (skip initial grace period < 3.5s so player has time to orient)
-        if (survivalTime >= 3.5) {
-          if (slalomDrift.x < center - chasmW * 0.5 + 8.0 ||
-              slalomDrift.x > center + chasmW * 0.5 - 8.0) {
-            _handleHemisphereFailure(
-              failedHemisphere:
-                  hemisphereState.leftMechanic == HemisphereMechanic.slalomDrift
-                  ? 'LEFT'
-                  : 'RIGHT',
-              failedMechanic: 'SLALOM',
-              impactPoint: Offset(slalomDrift.x, slalomDrift.y),
-            );
-            return;
-          }
-        }
-
-        // Slalom pylon collisions
-        for (final p in slalomPylons) {
-          final double dx = p.x - slalomDrift.x;
-          final double dy = p.y - slalomDrift.y;
-          if (math.sqrt(dx * dx + dy * dy) < p.radius + 10.0) {
-            _handleHemisphereFailure(
-              failedHemisphere:
-                  hemisphereState.leftMechanic == HemisphereMechanic.slalomDrift
-                  ? 'LEFT'
-                  : 'RIGHT',
-              failedMechanic: 'SLALOM',
-              impactPoint: Offset(slalomDrift.x, slalomDrift.y),
-            );
-            return;
-          }
-        }
-      }
+    } else if (gamePairMode == GamePairMode.dimensionBreach) {
+      // Dimension Breach collisions and boundary checks are handled dynamically in _processBreachEvents
     } else if (gamePairMode == GamePairMode.pulseReflex) {
       // Pair 3 Collisions
       if (orbAlive) {
@@ -1555,8 +1370,9 @@ class GameController extends ChangeNotifier {
     required String failedMechanic,
     required Offset impactPoint,
   }) {
-    if (playMode == PlayHandMode.twoHands) {
-      // 2 Hands Mode: Any crash terminates run immediately
+    if (playMode == PlayHandMode.twoHands ||
+        gamePairMode == GamePairMode.dimensionBreach) {
+      // 2 Hands Mode & Dimension Breach: Any crash terminates run immediately
       _triggerDeath(
         failedHemisphere: failedHemisphere,
         failedMechanic: failedMechanic,
@@ -1565,16 +1381,14 @@ class GameController extends ChangeNotifier {
     } else {
       // 1 Hand Mode: Eliminate failed side, continue with surviving side
       if (failedMechanic == 'ORB' ||
-          failedMechanic == 'PHASE CORE' ||
+          failedMechanic == 'ZERO-G DEFLECTOR' ||
           failedMechanic == 'SHIELD') {
         orbAlive = false;
         laserGates.clear();
-        polarityWalls.clear();
         plasmaBolts.clear();
       } else {
         dartAlive = false;
         monoliths.clear();
-        slalomPylons.clear();
         quantumBlockades.clear();
       }
 
@@ -1687,8 +1501,8 @@ class GameController extends ChangeNotifier {
         switch (gamePairMode) {
           case GamePairMode.classic:
             return HemisphereMechanic.dart;
-          case GamePairMode.phaseFlux:
-            return HemisphereMechanic.slalomDrift;
+          case GamePairMode.dimensionBreach:
+            return HemisphereMechanic.breachBeta;
           case GamePairMode.pulseReflex:
             return HemisphereMechanic.quantumWarp;
         }
@@ -1696,8 +1510,8 @@ class GameController extends ChangeNotifier {
         switch (gamePairMode) {
           case GamePairMode.classic:
             return HemisphereMechanic.orb;
-          case GamePairMode.phaseFlux:
-            return HemisphereMechanic.phaseCore;
+          case GamePairMode.dimensionBreach:
+            return HemisphereMechanic.breachAlpha;
           case GamePairMode.pulseReflex:
             return HemisphereMechanic.shieldPing;
         }
@@ -1708,9 +1522,119 @@ class GameController extends ChangeNotifier {
         : hemisphereState.rightMechanic;
   }
 
+  void _processBreachEvents(List<BreachEvent> events) {
+    for (final event in events) {
+      if (event.scoreDelta > 0.0) {
+        currentScore += event.scoreDelta * batteryState.scoreMultiplier;
+      }
+
+      switch (event.type) {
+        case BreachEventType.breachSuccess:
+          nearMissCount++;
+          ProceduralAudioSynth.instance.playWarp();
+          HapticChoreographer.instance.triggerSwapTick();
+          particlePool.spawnBurst(
+            origin: event.position,
+            count: 14,
+            color: SplitPalette.nearMissCyan,
+            speed: 160.0,
+          );
+          particlePool.spawnBurst(
+            origin: event.position,
+            count: 14,
+            color: SplitPalette.hazardCrimson,
+            speed: 160.0,
+          );
+          _addCameraShake(2.0);
+          break;
+
+        case BreachEventType.dividerDeflect:
+          ProceduralAudioSynth.instance.playTap();
+          particlePool.spawnBurst(
+            origin: event.position,
+            count: 6,
+            color: Colors.white,
+            speed: 90.0,
+          );
+          _addCameraShake(1.5);
+          break;
+
+        case BreachEventType.leftPaddleHit:
+          ProceduralAudioSynth.instance.playShieldPing();
+          HapticChoreographer.instance.triggerTap();
+          particlePool.spawnBurst(
+            origin: event.position,
+            count: 10,
+            color: SplitPalette.nearMissCyan,
+            speed: 130.0,
+          );
+          _addCameraShake(2.0);
+          break;
+
+        case BreachEventType.rightPaddleHit:
+          ProceduralAudioSynth.instance.playShieldPing();
+          HapticChoreographer.instance.triggerTap();
+          particlePool.spawnBurst(
+            origin: event.position,
+            count: 10,
+            color: batteryState.isOverdrive
+                ? SplitPalette.overdriveRed
+                : SplitPalette.hazardCrimson,
+            speed: 130.0,
+          );
+          _addCameraShake(2.0);
+          break;
+
+        case BreachEventType.wallBounce:
+          ProceduralAudioSynth.instance.playTap();
+          particlePool.spawnBurst(
+            origin: event.position,
+            count: 5,
+            color: Colors.white70,
+            speed: 80.0,
+          );
+          break;
+
+        case BreachEventType.leftMiss:
+          final String failedMechanicName =
+              hemisphereState.leftMechanic == HemisphereMechanic.breachAlpha
+                  ? 'ZERO-G DEFLECTOR'
+                  : 'HEAVY-G DEFLECTOR';
+          _handleHemisphereFailure(
+            failedHemisphere: 'LEFT',
+            failedMechanic: failedMechanicName,
+            impactPoint: event.position,
+          );
+          return;
+
+        case BreachEventType.rightMiss:
+          final String failedMechanicName =
+              hemisphereState.rightMechanic == HemisphereMechanic.breachBeta
+                  ? 'HEAVY-G DEFLECTOR'
+                  : 'ZERO-G DEFLECTOR';
+          _handleHemisphereFailure(
+            failedHemisphere: 'RIGHT',
+            failedMechanic: failedMechanicName,
+            impactPoint: event.position,
+          );
+          return;
+      }
+    }
+  }
+
   // Unified Input Routing across dynamic hemisphere swaps
   void handleSidePointerDown(bool isLeft, Offset localPosition) {
     if (state != GamePlayState.playing) return;
+
+    // Dimension Breach: Direct spatial touch binding (Strictly 2-Hands)
+    if (gamePairMode == GamePairMode.dimensionBreach) {
+      if (isLeft) {
+        dimensionBreach.handleLeftInput(localPosition.dy, screenHeight);
+      } else {
+        dimensionBreach.handleRightInput(localPosition.dy, screenHeight);
+      }
+      return;
+    }
 
     final mechanic = _resolveTargetMechanic(isLeft);
     if (!isMechanicAlive(mechanic)) return;
@@ -1745,16 +1669,11 @@ class GameController extends ChangeNotifier {
           speed: 70.0,
         );
         break;
-      case HemisphereMechanic.phaseCore:
-        phaseCore.flip();
-        ProceduralAudioSynth.instance.playPhaseAbsorb();
-        HapticChoreographer.instance.triggerTap();
-        particlePool.spawnBurst(
-          origin: Offset(phaseCore.x, phaseCore.y),
-          count: 8,
-          color: phaseCore.currentColor,
-          speed: 120.0,
-        );
+      case HemisphereMechanic.breachAlpha:
+        dimensionBreach.handleLeftInput(localPosition.dy, screenHeight);
+        break;
+      case HemisphereMechanic.breachBeta:
+        dimensionBreach.handleRightInput(localPosition.dy, screenHeight);
         break;
       case HemisphereMechanic.shieldPing:
         shieldPing.triggerPing();
@@ -1763,12 +1682,6 @@ class GameController extends ChangeNotifier {
         break;
       case HemisphereMechanic.dart:
         dart.handleTap(targetTapX, laneLeft: laneLeft, laneRight: laneRight);
-        break;
-      case HemisphereMechanic.slalomDrift:
-        slalomDrift.targetX = targetTapX.clamp(
-          laneLeft + 16.0,
-          laneRight - 16.0,
-        );
         break;
       case HemisphereMechanic.quantumWarp:
         quantumWarp.warp();
@@ -1786,6 +1699,16 @@ class GameController extends ChangeNotifier {
 
   void handleSidePointerMove(bool isLeft, double deltaX, Offset localPosition) {
     if (state != GamePlayState.playing) return;
+
+    // Dimension Breach: Direct spatial touch binding (Strictly 2-Hands)
+    if (gamePairMode == GamePairMode.dimensionBreach) {
+      if (isLeft) {
+        dimensionBreach.handleLeftInput(localPosition.dy, screenHeight);
+      } else {
+        dimensionBreach.handleRightInput(localPosition.dy, screenHeight);
+      }
+      return;
+    }
 
     final mechanic = _resolveTargetMechanic(isLeft);
     if (!isMechanicAlive(mechanic)) return;
@@ -1816,11 +1739,11 @@ class GameController extends ChangeNotifier {
           laneRight: laneRight,
         );
         break;
-      case HemisphereMechanic.slalomDrift:
-        slalomDrift.targetX = targetTapX.clamp(
-          laneLeft + 16.0,
-          laneRight - 16.0,
-        );
+      case HemisphereMechanic.breachAlpha:
+        dimensionBreach.handleLeftInput(localPosition.dy, screenHeight);
+        break;
+      case HemisphereMechanic.breachBeta:
+        dimensionBreach.handleRightInput(localPosition.dy, screenHeight);
         break;
       default:
         break;

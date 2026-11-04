@@ -10,8 +10,8 @@ enum MechanicSide { left, right }
 enum HemisphereMechanic {
   orb, // Pair 1: Gravity Defier
   dart, // Pair 1: Rail Weaver
-  phaseCore, // Pair 2: Ikaruga-style color inverter
-  slalomDrift, // Pair 2: Fluid sine-wave chasm drifter
+  breachAlpha, // Pair 2: Zero-G Deflector Alpha (Ping Pong)
+  breachBeta, // Pair 2: Heavy-G Deflector Beta (Ping Pong)
   shieldPing, // Pair 3: Rhythm reflex deflector
   quantumWarp, // Pair 3: Binary dual-track hopper
 }

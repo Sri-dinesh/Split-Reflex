@@ -43,7 +43,7 @@ void main() {
       await prefs.setControlMode(ControlMode.gyroTilt.name);
       await prefs.setPlayMode(PlayHandMode.oneHand.name);
       await prefs.setSessionMode(GameSessionMode.duoCoop.name);
-      await prefs.setPairMode(GamePairMode.phaseFlux.name);
+      await prefs.setPairMode(GamePairMode.dimensionBreach.name);
 
       // Simulate a cold start: drop the cached instance and reload.
       await prefs.load();
@@ -54,7 +54,7 @@ void main() {
       expect(prefs.controlMode, ControlMode.gyroTilt.name);
       expect(prefs.playMode, PlayHandMode.oneHand.name);
       expect(prefs.sessionMode, GameSessionMode.duoCoop.name);
-      expect(prefs.pairMode, GamePairMode.phaseFlux.name);
+      expect(prefs.pairMode, GamePairMode.dimensionBreach.name);
 
       // The runtime singletons follow the persisted flags.
       expect(ProceduralAudioSynth.instance.soundEnabled, isFalse);

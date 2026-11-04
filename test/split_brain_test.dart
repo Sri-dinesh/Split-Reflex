@@ -8,11 +8,10 @@ import 'package:split_brain/core/services/battery_telemetry_service.dart';
 import 'package:split_brain/core/services/procedural_audio_synth.dart';
 import 'package:split_brain/core/utils/math_utils.dart';
 import 'package:split_brain/core/utils/seeded_rng.dart';
+import 'package:split_brain/engine/entities/dimension_breach_entity.dart';
 import 'package:split_brain/engine/entities/obstacle_entity.dart';
 import 'package:split_brain/engine/entities/particle_pool.dart';
-import 'package:split_brain/engine/entities/phase_flux_entity.dart';
 import 'package:split_brain/engine/entities/shield_ping_entity.dart';
-import 'package:split_brain/engine/entities/slalom_drift_entity.dart';
 import 'package:split_brain/engine/entities/quantum_warp_entity.dart';
 import 'package:split_brain/engine/game_controller.dart';
 import 'package:split_brain/engine/hemisphere_state.dart';
@@ -358,20 +357,20 @@ void main() {
     });
 
     test(
-      'GamePairMode cycles properly through classic, phaseFlux, pulseReflex',
+      'GamePairMode cycles properly through classic, dimensionBreach, pulseReflex',
       () {
         final controller = GameController();
         expect(controller.gamePairMode, equals(GamePairMode.classic));
 
         controller.cycleGamePairMode();
-        expect(controller.gamePairMode, equals(GamePairMode.phaseFlux));
+        expect(controller.gamePairMode, equals(GamePairMode.dimensionBreach));
         expect(
           controller.hemisphereState.leftMechanic,
-          equals(HemisphereMechanic.phaseCore),
+          equals(HemisphereMechanic.breachAlpha),
         );
         expect(
           controller.hemisphereState.rightMechanic,
-          equals(HemisphereMechanic.slalomDrift),
+          equals(HemisphereMechanic.breachBeta),
         );
 
         controller.cycleGamePairMode();
@@ -390,13 +389,24 @@ void main() {
       },
     );
 
-    test('PhaseCore flips polarity and absorbs matching walls', () {
-      final core = PhaseCoreEntity();
-      expect(core.polarity, equals(PolarityColor.cyan));
-      core.flip();
-      expect(core.polarity, equals(PolarityColor.crimson));
-      core.flip();
-      expect(core.polarity, equals(PolarityColor.cyan));
+    test('DimensionBreach responds to left and right paddle steering inputs', () {
+      final breach = DimensionBreachEntity();
+      breach.reset(
+        initialLeftX: 50.0,
+        initialRightX: 350.0,
+        splitX: 200.0,
+        screenHeight: 800.0,
+      );
+
+      // Test bottom space touch mapping
+      breach.handleLeftInput(416.0, 800.0); // Top of bottom thumb zone
+      expect(breach.paddleLeftTargetY, equals(104.0)); // Top of paddle playfield
+
+      breach.handleRightInput(764.0, 800.0); // Bottom of bottom thumb zone
+      expect(breach.paddleRightTargetY, equals(696.0)); // Bottom of paddle playfield
+
+      breach.handleLeftInput(590.0, 800.0); // Center of bottom thumb zone
+      expect(breach.paddleLeftTargetY, equals(400.0)); // Center of playfield
     });
 
     test('ShieldPing triggers precision deflection window and cools down', () {
@@ -418,65 +428,187 @@ void main() {
       expect(warp.track, equals(QuantumTrack.left));
     });
 
-    test(
-      'SlalomDriftEntity provides straight centered runway at introFactor 0.0',
-      () {
-        final glider = SlalomDriftEntity();
-        const double laneLeft = 200.0;
-        const double laneRight = 400.0;
-        glider.reset(initialX: 300.0, initialY: 500.0);
+    test('DimensionBreachEntity updates ball physics and handles aperture breaches', () {
+      final breach = DimensionBreachEntity();
+      breach.reset(
+        initialLeftX: 50.0,
+        initialRightX: 350.0,
+        splitX: 200.0,
+        screenHeight: 800.0,
+      );
 
-        // At start (introFactor = 0.0), chasm center must be exactly lane midpoint (300.0)
-        final centerAtStart = glider.getChasmCenter(
-          500.0,
-          laneLeft,
-          laneRight,
-          introFactor: 0.0,
-        );
-        expect(centerAtStart, equals(300.0));
+      expect(breach.ballX, greaterThan(50.0));
+      expect(breach.ballX, lessThan(200.0));
+      expect(breach.ballVx, equals(220.0));
 
-        // Chasm width is wider during intro
-        final normalW = glider.getChasmWidth(200.0, introFactor: 1.0);
-        final introW = glider.getChasmWidth(200.0, introFactor: 0.0);
-        expect(introW, greaterThan(normalW));
-      },
-    );
+      final events = breach.update(
+        dt: 0.05,
+        screenWidth: 400.0,
+        screenHeight: 800.0,
+        splitX: 200.0,
+        leftLaneLeft: 0.0,
+        leftLaneRight: 200.0,
+        rightLaneLeft: 200.0,
+        rightLaneRight: 400.0,
+        speedScale: 1.0,
+        survivalTime: 1.0,
+        isLeftAlive: true,
+        isRightAlive: true,
+        inverted: false,
+      );
 
-    test('PhaseFlux and PulseReflex survive mutation swap smoothly without collision', () {
+      expect(events, isNotNull);
+      expect(breach.ballX, greaterThan(100.0));
+    });
+
+    test('DimensionBreach survives mutation swap smoothly', () {
       final controller = GameController();
       controller.updateDimensions(400.0, 800.0);
-      controller.setGamePairMode(GamePairMode.phaseFlux);
+      controller.setGamePairMode(GamePairMode.dimensionBreach);
       controller.startRun();
 
       expect(controller.state, equals(GamePlayState.playing));
       expect(
         controller.hemisphereState.leftMechanic,
-        equals(HemisphereMechanic.phaseCore),
+        equals(HemisphereMechanic.breachAlpha),
       );
       expect(
         controller.hemisphereState.rightMechanic,
-        equals(HemisphereMechanic.slalomDrift),
+        equals(HemisphereMechanic.breachBeta),
       );
 
       // Trigger mutation swap
       controller.executeMutation();
       controller.tick(Duration.zero, 0.033);
 
-      // Verify mutation executed without instant failure
+      // Verify mutation executed without failure
       expect(controller.state, equals(GamePlayState.playing));
       expect(
         controller.hemisphereState.leftMechanic,
-        equals(HemisphereMechanic.slalomDrift),
+        equals(HemisphereMechanic.breachBeta),
       );
       expect(
         controller.hemisphereState.rightMechanic,
-        equals(HemisphereMechanic.phaseCore),
+        equals(HemisphereMechanic.breachAlpha),
+      );
+    });
+
+    test('DimensionBreach routes touch to correct paddles before and after mutation swap', () {
+      final controller = GameController();
+      controller.updateDimensions(400.0, 800.0);
+      controller.setGamePairMode(GamePairMode.dimensionBreach);
+      controller.startRun();
+
+      // Before swap:
+      // Left touch in bottom space must move left paddle
+      controller.handleSidePointerDown(true, const Offset(100.0, 416.0));
+      expect(controller.dimensionBreach.paddleLeftTargetY, equals(104.0));
+      expect(controller.dimensionBreach.paddleRightTargetY, equals(400.0));
+
+      // Right touch in bottom space must move right paddle
+      controller.handleSidePointerDown(false, const Offset(300.0, 764.0));
+      expect(controller.dimensionBreach.paddleLeftTargetY, equals(104.0));
+      expect(controller.dimensionBreach.paddleRightTargetY, equals(696.0));
+
+      // Execute mutation swap (breachBeta is now on left, breachAlpha on right)
+      controller.executeMutation();
+      expect(
+        controller.hemisphereState.leftMechanic,
+        equals(HemisphereMechanic.breachBeta),
+      );
+      expect(
+        controller.hemisphereState.rightMechanic,
+        equals(HemisphereMechanic.breachAlpha),
       );
 
-      // Verify Slalom was cross-translated into the new left lane (0 - 200)
-      expect(controller.slalomDrift.x, lessThan(200.0));
-      expect(controller.slalomDrift.x, greaterThan(0.0));
-      expect(controller.phaseCore.x, greaterThan(200.0));
+      // After swap: Left touch MUST STILL move left paddle!
+      controller.handleSidePointerDown(true, const Offset(100.0, 590.0));
+      expect(controller.dimensionBreach.paddleLeftTargetY, equals(400.0));
+      expect(controller.dimensionBreach.paddleRightTargetY, equals(696.0));
+
+      // Right touch MUST STILL move right paddle!
+      controller.handleSidePointerDown(false, const Offset(300.0, 416.0));
+      expect(controller.dimensionBreach.paddleLeftTargetY, equals(400.0));
+      expect(controller.dimensionBreach.paddleRightTargetY, equals(104.0));
+
+      // Also verify drag movements in bottom space
+      controller.handleSidePointerMove(true, 0.0, const Offset(100.0, 764.0));
+      expect(controller.dimensionBreach.paddleLeftTargetY, equals(696.0));
+      controller.handleSidePointerMove(false, 0.0, const Offset(300.0, 590.0));
+      expect(controller.dimensionBreach.paddleRightTargetY, equals(400.0));
+    });
+
+    test('DimensionBreach gravity physics reverses accurately on polarity inversion and swap', () {
+      final breach = DimensionBreachEntity();
+
+      // 1. Normal (Alpha on Left, Not Inverted):
+      // Left realm pulls UPWARD (vy decreases), Right realm pulls DOWNWARD (vy increases)
+      breach.reset(initialLeftX: 50.0, initialRightX: 350.0, splitX: 200.0, screenHeight: 800.0);
+      breach.ballX = 100.0; // Left side
+      breach.ballVy = 0.0;
+      breach.update(
+        dt: 0.1,
+        screenWidth: 400.0,
+        screenHeight: 800.0,
+        splitX: 200.0,
+        leftLaneLeft: 0.0,
+        leftLaneRight: 200.0,
+        rightLaneLeft: 200.0,
+        rightLaneRight: 400.0,
+        speedScale: 1.0,
+        survivalTime: 5.0,
+        isLeftAlive: true,
+        isRightAlive: true,
+        inverted: false,
+        isLeftAlpha: true,
+      );
+      expect(breach.ballVy, lessThan(0.0), reason: 'Left Alpha should pull upward (negative vy)');
+
+      // 2. Polarity Inverted (Alpha on Left, Inverted = true):
+      // Left realm pulls DOWNWARD (vy increases)
+      breach.reset(initialLeftX: 50.0, initialRightX: 350.0, splitX: 200.0, screenHeight: 800.0);
+      breach.ballX = 100.0; // Left side
+      breach.ballVy = 0.0;
+      breach.update(
+        dt: 0.1,
+        screenWidth: 400.0,
+        screenHeight: 800.0,
+        splitX: 200.0,
+        leftLaneLeft: 0.0,
+        leftLaneRight: 200.0,
+        rightLaneLeft: 200.0,
+        rightLaneRight: 400.0,
+        speedScale: 1.0,
+        survivalTime: 5.0,
+        isLeftAlive: true,
+        isRightAlive: true,
+        inverted: true,
+        isLeftAlpha: true,
+      );
+      expect(breach.ballVy, greaterThan(0.0), reason: 'Left Alpha when inverted should pull downward (positive vy)');
+
+      // 3. Mutation Swapped (Beta on Left, Not Inverted):
+      // Left realm (Beta) pulls DOWNWARD (vy increases)
+      breach.reset(initialLeftX: 50.0, initialRightX: 350.0, splitX: 200.0, screenHeight: 800.0);
+      breach.ballX = 100.0; // Left side
+      breach.ballVy = 0.0;
+      breach.update(
+        dt: 0.1,
+        screenWidth: 400.0,
+        screenHeight: 800.0,
+        splitX: 200.0,
+        leftLaneLeft: 0.0,
+        leftLaneRight: 200.0,
+        rightLaneLeft: 200.0,
+        rightLaneRight: 400.0,
+        speedScale: 1.0,
+        survivalTime: 5.0,
+        isLeftAlive: true,
+        isRightAlive: true,
+        inverted: false,
+        isLeftAlpha: false,
+      );
+      expect(breach.ballVy, greaterThan(0.0), reason: 'Left Beta should pull downward (positive vy)');
     });
 
     test('1-Hand Mode: Surviving side crashing triggers game over autopsy', () {
@@ -530,5 +662,30 @@ void main() {
         expect(controller.state, equals(GamePlayState.deathSlowmo));
       },
     );
+
+    test('DimensionBreach disables 1-Hand mode and strictly enforces 2-Hands', () {
+      final controller = GameController();
+      controller.updateDimensions(400.0, 800.0);
+      controller.setGamePairMode(GamePairMode.dimensionBreach);
+
+      // Verify that toggling or setting 1-hand mode is prevented in Dimension Breach
+      expect(controller.playMode, equals(PlayHandMode.twoHands));
+      controller.togglePlayMode();
+      expect(controller.playMode, equals(PlayHandMode.twoHands));
+      controller.setPlayMode(PlayHandMode.oneHand);
+      expect(controller.playMode, equals(PlayHandMode.twoHands));
+
+      // If another mode was in 1-hand, switching to dimension breach resets to 2-hands
+      controller.setGamePairMode(GamePairMode.classic);
+      controller.setPlayMode(PlayHandMode.oneHand);
+      expect(controller.playMode, equals(PlayHandMode.oneHand));
+
+      controller.setGamePairMode(GamePairMode.dimensionBreach);
+      expect(controller.playMode, equals(PlayHandMode.twoHands));
+
+      // Starting run ensures 2-hands
+      controller.startRun();
+      expect(controller.playMode, equals(PlayHandMode.twoHands));
+    });
   });
 }

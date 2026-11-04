@@ -25,8 +25,8 @@ class DualThumbStartOverlay extends StatelessWidget {
     switch (mode) {
       case GamePairMode.classic:
         return 'Gravity Orb';
-      case GamePairMode.phaseFlux:
-        return 'Phase Core';
+      case GamePairMode.dimensionBreach:
+        return 'Zero-G Deflector';
       case GamePairMode.pulseReflex:
         return 'Shield Ping';
     }
@@ -36,8 +36,8 @@ class DualThumbStartOverlay extends StatelessWidget {
     switch (mode) {
       case GamePairMode.classic:
         return 'Hold to thrust upward';
-      case GamePairMode.phaseFlux:
-        return 'Tap to invert polarity';
+      case GamePairMode.dimensionBreach:
+        return 'Drag up/down to deflect';
       case GamePairMode.pulseReflex:
         return 'Tap on impact to deflect';
     }
@@ -47,8 +47,8 @@ class DualThumbStartOverlay extends StatelessWidget {
     switch (mode) {
       case GamePairMode.classic:
         return 'Rail Dart';
-      case GamePairMode.phaseFlux:
-        return 'Slalom Drift';
+      case GamePairMode.dimensionBreach:
+        return 'Heavy-G Deflector';
       case GamePairMode.pulseReflex:
         return 'Quantum Warp';
     }
@@ -58,8 +58,8 @@ class DualThumbStartOverlay extends StatelessWidget {
     switch (mode) {
       case GamePairMode.classic:
         return isGyro ? 'Tilt phone to steer' : 'Drag horizontally to weave';
-      case GamePairMode.phaseFlux:
-        return isGyro ? 'Tilt phone to drift' : 'Drag horizontally to drift';
+      case GamePairMode.dimensionBreach:
+        return 'Drag up/down to slingshot';
       case GamePairMode.pulseReflex:
         return 'Tap right to hop rails';
     }
@@ -377,8 +377,8 @@ class DualThumbStartOverlay extends StatelessWidget {
             accentColor: SplitPalette.nearMissCyan,
           ),
           _buildModeTab(
-            mode: GamePairMode.phaseFlux,
-            label: 'Phase Flux',
+            mode: GamePairMode.dimensionBreach,
+            label: 'Breach Pong',
             accentColor: const Color(0xFF00E5FF),
           ),
           _buildModeTab(
@@ -545,6 +545,8 @@ class DualThumbStartOverlay extends StatelessWidget {
   }
 
   Widget _buildFormatPills() {
+    final bool isPong = controller.gamePairMode == GamePairMode.dimensionBreach;
+
     return Row(
       children: [
         // Solo vs Duo
@@ -562,16 +564,21 @@ class DualThumbStartOverlay extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8.0),
-        // 2-Hands vs 1-Hand
+        // 2-Hands vs 1-Hand (Disabled for Dimension Breach Pong)
         Expanded(
           child: _buildSmallToggle(
-            label: controller.playMode == PlayHandMode.twoHands
-                ? '2-Hands Strict'
-                : '1-Hand Survival',
-            icon: controller.playMode == PlayHandMode.twoHands
-                ? Icons.bolt_rounded
-                : Icons.shield_outlined,
-            isActive: controller.playMode == PlayHandMode.oneHand,
+            label: isPong
+                ? '2-Hands Only'
+                : (controller.playMode == PlayHandMode.twoHands
+                    ? '2-Hands Strict'
+                    : '1-Hand Survival'),
+            icon: isPong
+                ? Icons.lock_outline_rounded
+                : (controller.playMode == PlayHandMode.twoHands
+                    ? Icons.bolt_rounded
+                    : Icons.shield_outlined),
+            isActive: !isPong && controller.playMode == PlayHandMode.oneHand,
+            isDisabled: isPong,
             activeColor: SplitPalette.nearMissCyan,
             onTap: controller.togglePlayMode,
           ),
@@ -601,22 +608,27 @@ class DualThumbStartOverlay extends StatelessWidget {
     required bool isActive,
     required Color activeColor,
     required VoidCallback onTap,
+    bool isDisabled = false,
   }) {
     return InkWell(
-      onTap: onTap,
+      onTap: isDisabled ? null : onTap,
       borderRadius: BorderRadius.circular(10.0),
       child: Container(
         height: 36.0,
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
         decoration: BoxDecoration(
-          color: isActive
-              ? activeColor.withOpacity(0.12)
-              : Colors.white.withOpacity(0.04),
+          color: isDisabled
+              ? Colors.white.withOpacity(0.02)
+              : (isActive
+                  ? activeColor.withOpacity(0.12)
+                  : Colors.white.withOpacity(0.04)),
           borderRadius: BorderRadius.circular(10.0),
           border: Border.all(
-            color: isActive
-                ? activeColor.withOpacity(0.5)
-                : Colors.white12,
+            color: isDisabled
+                ? Colors.white.withOpacity(0.06)
+                : (isActive
+                    ? activeColor.withOpacity(0.5)
+                    : Colors.white12),
             width: 1.0,
           ),
         ),
@@ -626,7 +638,9 @@ class DualThumbStartOverlay extends StatelessWidget {
             Icon(
               icon,
               size: 14.0,
-              color: isActive ? activeColor : Colors.white54,
+              color: isDisabled
+                  ? Colors.white24
+                  : (isActive ? activeColor : Colors.white54),
             ),
             const SizedBox(width: 5.0),
             Flexible(
@@ -634,7 +648,9 @@ class DualThumbStartOverlay extends StatelessWidget {
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: isActive ? Colors.white : Colors.white70,
+                  color: isDisabled
+                      ? Colors.white30
+                      : (isActive ? Colors.white : Colors.white70),
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700,
                 ),

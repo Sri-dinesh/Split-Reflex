@@ -4,10 +4,9 @@ import '../entities/particle_pool.dart';
 import '../game_controller.dart';
 import '../hemisphere_state.dart';
 import 'dart_hemisphere_painter.dart';
+import 'dimension_breach_painter.dart';
 import 'divider_painter.dart';
 import 'orb_hemisphere_painter.dart';
-import 'phase_hemisphere_painter.dart';
-import 'slalom_hemisphere_painter.dart';
 import 'shield_hemisphere_painter.dart';
 import 'quantum_hemisphere_painter.dart';
 import 'post_process_painter.dart';
@@ -68,6 +67,7 @@ class MasterGamePainter extends CustomPainter {
       canvas: canvas,
       size: size,
       mechanic: controller.hemisphereState.leftMechanic,
+      isLeft: true,
       laneLeft: 0.0,
       laneRight: splitX,
       fgColor: controller.hemisphereState.leftFg,
@@ -84,6 +84,7 @@ class MasterGamePainter extends CustomPainter {
       canvas: canvas,
       size: size,
       mechanic: controller.hemisphereState.rightMechanic,
+      isLeft: false,
       laneLeft: splitX,
       laneRight: size.width,
       fgColor: controller.hemisphereState.rightFg,
@@ -101,6 +102,21 @@ class MasterGamePainter extends CustomPainter {
       hemisphereState: controller.hemisphereState,
       survivalTime: controller.survivalTime,
     );
+
+    // 6.1 Render Dimension Breach Center Slit Window & Singularity Orb (across divider)
+    if (controller.gamePairMode == GamePairMode.dimensionBreach) {
+      final bool isLeftAlpha =
+          controller.hemisphereState.leftMechanic == HemisphereMechanic.breachAlpha;
+      DimensionBreachPainter.paintBreachWindowAndOrb(
+        canvas: canvas,
+        size: size,
+        breach: controller.dimensionBreach,
+        splitX: splitX,
+        survivalTime: controller.survivalTime,
+        isOverdrive: controller.batteryState.isOverdrive,
+        isLeftAlpha: isLeftAlpha,
+      );
+    }
 
     // 7. Render Post-Process Shader / Overdrive / Scanline Effects
     PostProcessPainter.paintThemeVisualShaders(
@@ -124,6 +140,7 @@ class MasterGamePainter extends CustomPainter {
     required Canvas canvas,
     required Size size,
     required HemisphereMechanic mechanic,
+    required bool isLeft,
     required double laneLeft,
     required double laneRight,
     required Color fgColor,
@@ -161,31 +178,21 @@ class MasterGamePainter extends CustomPainter {
             isOverdrive: controller.batteryState.isOverdrive,
           );
           break;
-        case HemisphereMechanic.phaseCore:
-          PhaseHemispherePainter.paint(
+        case HemisphereMechanic.breachAlpha:
+        case HemisphereMechanic.breachBeta:
+          DimensionBreachPainter.paintHemisphere(
             canvas: canvas,
             size: size,
-            core: controller.phaseCore,
-            walls: controller.polarityWalls,
+            breach: controller.dimensionBreach,
+            isLeft: isLeft,
+            mechanic: mechanic,
+            inverted: controller.hemisphereState.isPolarityInverted,
             laneLeft: laneLeft,
             laneRight: laneRight,
             fgColor: fgColor,
             bgColor: bgColor,
             survivalTime: controller.survivalTime,
-            isOverdrive: controller.batteryState.isOverdrive,
-          );
-          break;
-        case HemisphereMechanic.slalomDrift:
-          SlalomHemispherePainter.paint(
-            canvas: canvas,
-            size: size,
-            glider: controller.slalomDrift,
-            pylons: controller.slalomPylons,
-            laneLeft: laneLeft,
-            laneRight: laneRight,
-            fgColor: fgColor,
-            bgColor: bgColor,
-            survivalTime: controller.survivalTime,
+            isAlive: isAlive,
             isOverdrive: controller.batteryState.isOverdrive,
           );
           break;

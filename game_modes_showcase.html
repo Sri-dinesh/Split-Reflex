@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPLIT REFLEX // Mind-Blowing Game Modes Prototype Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,600;0,800;1,400&family=Space+Grotesk:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-void: #06070a;
+      --bg-card: rgba(14, 17, 24, 0.85);
+      --bg-card-border: rgba(255, 255, 255, 0.08);
+      --cyan: #00F0FF;
+      --magenta: #FF0055;
+      --lime: #00FF88;
+      --gold: #FFD700;
+      --dark-surface: #12151D;
+      --text-dim: #7E869E;
+      --text-bright: #F0F3F9;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-display: 'Space Grotesk', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-void);
+      color: var(--text-bright);
+      font-family: var(--font-display);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Ambient Cyber Background Grid */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-image: 
+        radial-gradient(circle at 50% 10%, rgba(0, 240, 255, 0.08) 0%, transparent 60%),
+        radial-gradient(circle at 85% 80%, rgba(255, 0, 85, 0.06) 0%, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Header Bar */
+    header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 36px;
+      border-bottom: 1px solid var(--bg-card-border);
+      background: rgba(6, 7, 10, 0.85);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-glyph {
+      width: 32px;
+      height: 32px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-glyph::before, .brand-glyph::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 24px;
+      border-radius: 2px;
+    }
+    .brand-glyph::before {
+      left: 0;
+      background: var(--cyan);
+      clip-path: polygon(100% 0, 0 50%, 100% 100%);
+    }
+    .brand-glyph::after {
+      right: 0;
+      background: var(--magenta);
+      clip-path: polygon(0 0, 100% 50%, 0 100%);
+    }
+
+    .brand-text h1 {
+      font-size: 1.15rem;
+      letter-spacing: 0.22em;
+      font-weight: 800;
+      background: linear-gradient(90deg, #FFFFFF, #B0C4DE);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-text p {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      color: var(--cyan);
+      text-transform: uppercase;
+    }
+
+    .header-pills {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pill-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--lime);
+      box-shadow: 0 0 8px var(--lime);
+      animation: pulseDot 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    /* Main Container Grid */
+    main {
+      position: relative;
+      z-index: 5;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 32px;
+      max-width: 1540px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 28px 36px 40px;
+    }
+
+    @media (max-width: 1100px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left Column: Device Viewport Showcase */
+    .viewport-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .device-chassis {
+      position: relative;
+      width: 375px;
+      height: 720px;
+      background: #030406;
+      border-radius: 44px;
+      padding: 12px;
+      box-shadow: 
+        0 0 0 2px rgba(255, 255, 255, 0.08),
+        0 0 0 5px #0E121B,
+        0 28px 70px -10px rgba(0, 0, 0, 0.9),
+        0 0 40px -10px rgba(0, 240, 255, 0.15);
+      transition: box-shadow 0.4s ease;
+    }
+
+    .device-screen-bezel {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 34px;
+      overflow: hidden;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Dynamic Island Notch */
+    .dynamic-island {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 24px;
+      background: #000;
+      border-radius: 14px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      pointer-events: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+
+    .dynamic-island .camera {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #0C121E;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .dynamic-island .sensor {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #08101C;
+    }
+
+    /* Canvas Viewport */
+    #gameCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    /* On-Screen Touch Feedback Layer */
+    .thumb-touch-indicator {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 700;
+      transition: transform 0.04s ease-out;
+      z-index: 40;
+    }
+
+    .thumb-left {
+      border: 2px solid var(--cyan);
+      background: radial-gradient(circle, rgba(0, 240, 255, 0.3) 0%, transparent 70%);
+      color: var(--cyan);
+      box-shadow: 0 0 16px var(--cyan);
+    }
+
+    .thumb-right {
+      border: 2px solid var(--magenta);
+      background: radial-gradient(circle, rgba(255, 0, 85, 0.3) 0%, transparent 70%);
+      color: var(--magenta);
+      box-shadow: 0 0 16px var(--magenta);
+    }
+
+    /* Viewport Controls Tray */
+    .device-controls-tray {
+      width: 375px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .btn-action {
+      flex: 1;
+      padding: 9px 12px;
+      border-radius: 12px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid var(--bg-card-border);
+      background: var(--dark-surface);
+      color: var(--text-dim);
+    }
+
+    .btn-action:hover {
+      color: var(--text-bright);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-action.active {
+      background: rgba(0, 240, 255, 0.12);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      box-shadow: 0 0 14px -2px rgba(0, 240, 255, 0.4);
+    }
+
+    .btn-action.active-sound {
+      background: rgba(0, 255, 136, 0.12);
+      border-color: var(--lime);
+      color: var(--lime);
+      box-shadow: 0 0 14px -2px rgba(0, 255, 136, 0.4);
+    }
+
+    .keyboard-hint {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-align: center;
+      padding: 4px;
+      letter-spacing: 0.04em;
+    }
+    .keyboard-hint kbd {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: var(--text-bright);
+    }
+
+    /* Right Column: Modes Selector & Breakdown */
+    .details-column {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Mode Navigation Tabs */
+    .modes-tabs-nav {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .modes-tabs-nav {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .tab-item {
+      position: relative;
+      background: var(--bg-card);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      backdrop-filter: blur(12px);
+    }
+
+    .tab-item:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+      background: rgba(24, 29, 40, 0.85);
+    }
+
+    .tab-item.active {
+      border-color: var(--cyan);
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.12) 0%, rgba(14, 17, 24, 0.95) 100%);
+      box-shadow: 0 0 24px -4px rgba(0, 240, 255, 0.3);
+    }
+
+    .tab-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .tab-num {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--cyan);
+    }
+
+    .tab-tag {
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .tab-item.active .tab-tag {
+      background: rgba(0, 240, 255, 0.2);
+      color: var(--cyan);
+    }
+
+    .tab-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--text-bright);
+    }
+
+    .tab-genre {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      line-height: 1.3;
+    }
+
+    /* Active Mode Detail Card */
+    .mode-deep-dive-card {
+      background: var(--bg-card);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 24px;
+      padding: 30px;
+      backdrop-filter: blur(20px);
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mode-deep-dive-card::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0; width: 220px; height: 220px;
+      background: radial-gradient(circle, var(--accent-glow, rgba(0, 240, 255, 0.1)) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .card-header-block {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mode-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mode-badge {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(0, 240, 255, 0.15);
+      color: var(--cyan);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+    }
+
+    .mode-friction-metric {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .mode-hero-name {
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      line-height: 1.15;
+    }
+
+    .mode-pitch-tagline {
+      font-size: 1.05rem;
+      color: var(--cyan);
+      font-style: italic;
+      line-height: 1.4;
+      font-family: var(--font-mono);
+    }
+
+    /* Hands Execution Breakdown Grid */
+    .hands-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .hands-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .hand-card {
+      background: rgba(10, 13, 20, 0.7);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hand-card.left-hand {
+      border-left: 3px solid var(--cyan);
+    }
+
+    .hand-card.right-hand {
+      border-left: 3px solid var(--magenta);
+    }
+
+    .hand-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .hand-tag {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .left-hand .hand-tag { color: var(--cyan); }
+    .right-hand .hand-tag { color: var(--magenta); }
+
+    .hand-badge-role {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-dim);
+    }
+
+    .hand-role-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    .hand-desc {
+      font-size: 0.82rem;
+      color: #A6AFCE;
+      line-height: 1.5;
+    }
+
+    /* The Synergistic Mindfuck Block */
+    .mindfuck-box {
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(135deg, rgba(255, 0, 85, 0.08) 0%, rgba(0, 240, 255, 0.08) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mindfuck-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .mindfuck-body {
+      font-size: 0.88rem;
+      color: var(--text-bright);
+      line-height: 1.55;
+    }
+
+    /* Feature Bullets */
+    .feature-points {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .feature-points {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feat-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .feat-label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .feat-val {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    /* Bottom Action & Decision Voting */
+    .voting-decision-bar {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-radius: 16px;
+      background: var(--dark-surface);
+      border: 1px solid var(--bg-card-border);
+      gap: 14px;
+    }
+
+    .decision-label h4 {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    .decision-label p {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    .btn-vote {
+      padding: 10px 22px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--cyan) 0%, #0099FF 100%);
+      color: #000;
+      font-weight: 800;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+    }
+
+    .btn-vote:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 0 28px rgba(0, 240, 255, 0.5);
+    }
+
+    .btn-vote.voted {
+      background: var(--lime);
+      box-shadow: 0 0 24px rgba(0, 255, 136, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="brand-title">
+      <div class="brand-glyph"></div>
+      <div class="brand-text">
+        <h1>SPLIT REFLEX</h1>
+        <p>Advanced Game Modes // Conceptual Lab</p>
+      </div>
+    </div>
+    <div class="header-pills">
+      <div class="pill-status">
+        <span class="status-dot"></span>
+        <span>6 Live Interactive Simulators</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Viewports & Details Container -->
+  <main>
+
+    <!-- LEFT COLUMN: Mobile Screen Chassis & Live 60FPS Canvas -->
+    <div class="viewport-column">
+      <div class="device-chassis">
+        <div class="device-screen-bezel">
+          <!-- Dynamic Island Notch -->
+          <div class="dynamic-island">
+            <div class="camera"></div>
+            <div class="sensor"></div>
+          </div>
+
+          <!-- Canvas Simulation -->
+          <canvas id="gameCanvas" width="375" height="720"></canvas>
+
+          <!-- On-screen thumb indicators for touch/auto visualization -->
+          <div id="thumbLeft" class="thumb-touch-indicator thumb-left" style="display: none;">L</div>
+          <div id="thumbRight" class="thumb-touch-indicator thumb-right" style="display: none;">R</div>
+        </div>
+      </div>
+
+      <!-- Controls Tray -->
+      <div class="device-controls-tray">
+        <div class="control-row">
+          <button id="btnAutoDemo" class="btn-action active" onclick="toggleAutoDemo()">
+            <span id="autoDemoIcon">🤖</span> Auto-Pilot Sim
+          </button>
+          <button id="btnSpeed" class="btn-action" onclick="cycleSpeed()">
+            ⚡ Speed: <span id="speedLabel">1.0x</span>
+          </button>
+          <button id="btnSound" class="btn-action" onclick="toggleAudioSynth()">
+            🔊 Synth Audio: <span id="soundLabel">OFF</span>
+          </button>
+        </div>
+        <div class="keyboard-hint">
+          🎮 Interactive Controls: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> (Left Thumb) &bull; <kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>&rarr;</kbd><kbd>&darr;</kbd> (Right Thumb) or Drag directly on Screen!
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Modes Selector & Breakdown Details -->
+    <div class="details-column">
+      
+      <!-- 6 Game Mode Selector Tabs -->
+      <div class="modes-tabs-nav">
+        <!-- Mode 0 -->
+        <div class="tab-item active" onclick="selectMode(0)">
+          <div class="tab-header-row">
+            <span class="tab-num">MODE 01</span>
+            <span class="tab-tag">Elastic Laser</span>
+          </div>
+          <div class="tab-title">QUANTUM TETHER</div>
+          <div class="tab-genre">Taut energy beam slicing prism crystals & dodging dark pylons</div>
+        </div>
+
+        <!-- Mode 1 -->
+        <div class="tab-item" onclick="selectMode(1)">
+          <div class="tab-header-row">
+            <span class="tab-num">MODE 02</span>
+            <span class="tab-tag">Temporal Paradox</span>
+          </div>
+          <div class="tab-title">CHRONO RIFT</div>
+          <div class="tab-genre">Right thumb forecasts +2.0s in the future; Left thumb executes in the present</div>
+        </div>
+
+        <!-- Mode 2 -->
+        <div class="tab-item" onclick="selectMode(2)">
+          <div class="tab-header-row">
+            <span class="tab-num">MODE 03</span>
+            <span class="tab-tag">Zero-G Membrane</span>
+          </div>
+          <div class="tab-title">DIMENSION BREACH</div>
+          <div class="tab-genre">Interdimensional ping-pong with inverted gravity through split divider seam</div>
+        </div>
+
+        <!-- Mode 3 -->
+        <div class="tab-item" onclick="selectMode(3)">
+          <div class="tab-header-row">
+            <span class="tab-num">MODE 04</span>
+            <span class="tab-tag">Neuro Crossfire</span>
+          </div>
+          <div class="tab-title">STROOP OVERRIDE</div>
+          <div class="tab-genre">Left logic puzzle solves unlock right hyper-speed kinetic forcefields</div>
+        </div>
+
+        <!-- Mode 4 -->
+        <div class="tab-item" onclick="selectMode(4)">
+          <div class="tab-header-row">
+            <span class="tab-num">MODE 05</span>
+            <span class="tab-tag">Magnetic Physics</span>
+          </div>
+          <div class="tab-title">POLARITY GRAVITON</div>
+          <div class="tab-genre">Attraction & repulsion dynamics; balance tension while absorbing charged fields</div>
+        </div>
+
+        <!-- Mode 5 -->
+        <div class="tab-item" onclick="selectMode(5)">
+          <div class="tab-header-row">
+            <span class="tab-num">MODE 06</span>
+            <span class="tab-tag">Audio Rhythm</span>
+          </div>
+          <div class="tab-title">SYNAPSE BEAT</div>
+          <div class="tab-genre">Polyrhythmic kick pulses clear barriers for continuous analog melody flight</div>
+        </div>
+      </div>
+
+      <!-- Mode Detailed Deep-Dive Card (Populated dynamically) -->
+      <div id="modeDetailCard" class="mode-deep-dive-card">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Voting / Decision Bar -->
+      <div class="voting-decision-bar">
+        <div class="decision-label">
+          <h4 id="votePromptTitle">Like this game mode direction?</h4>
+          <p>Click to bookmark your favorite concept for implementation into the Flutter engine.</p>
+        </div>
+        <button id="btnVoteMode" class="btn-vote" onclick="castVote()">
+          <span>★ VOTE FOR THIS MODE</span>
+        </button>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    // --- MODE METADATA & CONTENT ---
+    const MODES_DATA = [
+      {
+        id: 0,
+        badge: "KINETIC PHYSICS TETHER",
+        name: "QUANTUM TETHER",
+        pitch: "\"You don't steer two isolated ships—you hold the two endpoints of a high-energy laser beam.\"",
+        friction: "2-Point Geometry at 60 FPS",
+        leftHand: {
+          role: "Anchor Node Alpha (Cyan)",
+          desc: "Full 2D floating coordinate. Dragging or tilting alters tether anchor position, beam tension, and rotational trajectory."
+        },
+        rightHand: {
+          role: "Anchor Node Beta (Magenta)",
+          desc: "Opposing anchor point. Sweeping up/down angles the beam diagonally to slice descending prism crystals."
+        },
+        mindfuck: "Unlike standard dodging where your hands operate independently, your thumbs are physically handcuffed by the laser! To squeeze through narrow obsidian pylon gates, both thumbs must simultaneously pinch toward the center. To slice wide prism fields, you must cross your arms or whip one node around the other.",
+        bullets: [
+          { label: "Core Action", val: "Beam slicing & tension pinching" },
+          { label: "Visceral Juiciness", val: "Sparks, beam refraction, laser audio hum" },
+          { label: "Why It's Addictive", val: "Feels like wielding a double-handed light whip" }
+        ]
+      },
+      {
+        id: 1,
+        badge: "ASYMMETRIC TIME PARADOX",
+        name: "CHRONO RIFT",
+        pitch: "\"Left hand lives in the Present. Right hand lives 2 Seconds in the Future.\"",
+        friction: "Temporal Forecasting vs Muscle Execution",
+        leftHand: {
+          role: "The Real-Time Vessel (Cyan)",
+          desc: "Navigates a lethal, impenetrable obstacle field in real-time. Cannot survive unless corridors are paved ahead of time."
+        },
+        rightHand: {
+          role: "The Chrono Oracle (Magenta)",
+          desc: "Operates 2.0 seconds in the future in wireframe vector space, hacking open lockdown gates and deploying deflectors."
+        },
+        mindfuck: "Human brains rely on instant feedback loops. Chrono Rift breaks this: your right thumb must predict where the left vessel will be 2 seconds from now, while your left thumb must blindly trust the path paved in the future. At 15s mutation, the time rift inverts!",
+        bullets: [
+          { label: "Core Action", val: "Asynchronous path-paving" },
+          { label: "Visceral Juiciness", val: "Wireframe time-dilation scanlines & rewind ripples" },
+          { label: "Why It's Addictive", val: "Unlocks God-tier foresight flow state" }
+        ]
+      },
+      {
+        id: 2,
+        badge: "ZERO-G MEMBRANE KEEP-UP",
+        name: "DIMENSION BREACH",
+        pitch: "\"Single-player interdimensional ping-pong through a permeable screen divider.\"",
+        friction: "Alternating Gravity Inversion",
+        leftHand: {
+          role: "Anti-Gravity Deflector (Upward Flow)",
+          desc: "Left realm has reversed ceiling-bound gravity. Intercepts the falling core and ricochets it through open slit windows."
+        },
+        rightHand: {
+          role: "Heavy-Gravity Deflector (Downward Flow)",
+          desc: "Right realm has downward plummet gravity. Catches the high-speed core and slingshots it back to the left."
+        },
+        mindfuck: "There is only ONE singularity core bouncing between both halves! The divider is a solid wall except for a moving breach slit. You have to deflect the core through the slit at the exact instant it aligns, and your brain must switch from thinking 'UP' to thinking 'DOWN' on every volley.",
+        bullets: [
+          { label: "Core Action", val: "Slit-targeting ricochet keep-up" },
+          { label: "Visceral Juiciness", val: "Screen-shake impacts & neon shockwaves" },
+          { label: "Why It's Addictive", val: "Insanely fast arcade momentum & tension" }
+        ]
+      },
+      {
+        id: 3,
+        badge: "NEUROLOGICAL COGNITIVE CROSSFIRE",
+        name: "STROOP OVERRIDE",
+        pitch: "\"Left Brain (Analytical Glyph Decoder) vs. Right Brain (Spatial Reflex Runner).\"",
+        friction: "Direct Neuro-Cognitive Channel Jamming",
+        leftHand: {
+          role: "Stroop Matrix Solver",
+          desc: "Rapid-fire cognitive flashcards: match ink colors vs words, parity equations, or mirrored symbols to emit bypass keys."
+        },
+        rightHand: {
+          role: "Hyper-Kinetic Runner",
+          desc: "Full-speed tunnel traversal. Approaching laser blast doors are impassable unless Left hand submits the unlock key."
+        },
+        mindfuck: "Targets the famous Stroop Effect. When Left hand sees the word 'RED' printed in Cyan ink, your verbal brain instinctively screams Red, but your physical thumb must press Cyan. If you hesitate for 0.25 seconds, your right runner smashes into a firewall at Mach 2.",
+        bullets: [
+          { label: "Core Action", val: "Real-time cognitive puzzle & warp running" },
+          { label: "Visceral Juiciness", val: "Glass-shattering gate explosions upon solve" },
+          { label: "Why It's Addictive", val: "Genuine brain-training meets adrenaline racing" }
+        ]
+      },
+      {
+        id: 4,
+        badge: "MAGNETIC FIELD COUPLING",
+        name: "POLARITY GRAVITON",
+        pitch: "\"Too close, you annihilate. Too far, the orbital tether breaks. Balance the pull.\"",
+        friction: "Non-Linear Magnetic Attraction Forces",
+        leftHand: {
+          role: "Negative (-) Magnetic Core (Cyan)",
+          desc: "Steers against the inward magnetic pull of the center seam. Absorbs incoming cyan particle clouds."
+        },
+        rightHand: {
+          role: "Positive (+) Magnetic Core (Magenta)",
+          desc: "Counter-weights the left core. Pulls and releases to steer around giant electromagnetic disruptor fields."
+        },
+        mindfuck: "Your two thumbs are magnetically linked. When you pull left away, right feels an elastic pull; when they drift together, gravity accelerates exponentially toward a lethal center collision. You are constantly balancing tension while dodging incoming hazards.",
+        bullets: [
+          { label: "Core Action", val: "Magnetic tension equilibrium" },
+          { label: "Visceral Juiciness", val: "Curved magnetic flux lines & electrostatic crackles" },
+          { label: "Why It's Addictive", val: "Deeply tactile physics with infinite skill curve" }
+        ]
+      },
+      {
+        id: 5,
+        badge: "POLYRHYTHM AUDIO SYNTHESIZER",
+        name: "SYNAPSE BEAT",
+        pitch: "\"Left hand drops the 4/4 Sub-Bass Shockwaves. Right hand shreds the Lead Melody Flight.\"",
+        friction: "Polyrhythmic Pulse vs Analog Sine Flow",
+        leftHand: {
+          role: "The Rhythm Drummer (3/4 or 4/4 Beat)",
+          desc: "Strict timing taps on the circular beat compass. Perfect-timed beats detonate ground hazards and build the score combo."
+        },
+        rightHand: {
+          role: "The Analog Wave Rider",
+          desc: "Smooth continuous gliding through floating harmonic rings, weaving like a musical ribbon through the sonic tunnel."
+        },
+        mindfuck: "Asking one hand to perform discrete, hard-quantized tap beats (tap-tap-tap) while the other hand performs continuous, buttery analog fluid motions breaks the brain's motor cortex. When synchronized, you are literally performing electronic music live.",
+        bullets: [
+          { label: "Core Action", val: "Beat-drop shockwaves + continuous flight" },
+          { label: "Visceral Juiciness", val: "Audio-reactive bass ripples & live procedural synth" },
+          { label: "Why It's Addictive", val: "Instant flow state + viral audio shareability" }
+        ]
+      }
+    ];
+
+    // --- APP & SIMULATION STATE ---
+    let activeModeIndex = 0;
+    let isAutoDemo = true;
+    let simSpeed = 1.0;
+    let isSoundOn = false;
+    let votes = [0, 0, 0, 0, 0, 0];
+
+    // Canvas setup
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    // Virtual Touch & Input coordinates
+    const inputState = {
+      left: { x: W * 0.25, y: H * 0.70, active: false, vx: 0, vy: 0 },
+      right: { x: W * 0.75, y: H * 0.70, active: false, vx: 0, vy: 0 },
+      keys: {}
+    };
+
+    // Global simulation time & entities
+    let simTime = 0;
+    let particles = [];
+    let obstacles = [];
+    let score = 0;
+    let combo = 1;
+
+    // --- PROCEDURAL AUDIO SYNTH (WEB AUDIO API) ---
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playSynthTone(freq, type = 'sine', duration = 0.15, gainVal = 0.2) {
+      if (!isSoundOn) return;
+      try {
+        const actx = getAudioContext();
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, actx.currentTime);
+        gain.gain.setValueAtTime(gainVal, actx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(actx.destination);
+        osc.start();
+        osc.stop(actx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playBassKick() {
+      if (!isSoundOn) return;
+      try {
+        const actx = getAudioContext();
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+        osc.frequency.setValueAtTime(140, actx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(32, actx.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.4, actx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(actx.destination);
+        osc.start();
+        osc.stop(actx.currentTime + 0.2);
+      } catch(e) {}
+    }
+
+    // --- PARTICLE HELPER ---
+    function spawnParticles(x, y, color, count = 12, speed = 120) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const v = (0.3 + Math.random() * 0.7) * speed;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * v,
+          vy: Math.sin(angle) * v,
+          life: 1.0,
+          decay: 1.2 + Math.random() * 1.5,
+          color: color,
+          size: 1.5 + Math.random() * 2.5
+        });
+      }
+    }
+
+    // --- MODE INITIALIZERS & LOGIC ---
+
+    // 0: QUANTUM TETHER
+    let tetherPrisms = [];
+    let tetherPylons = [];
+    function initQuantumTether() {
+      tetherPrisms = [];
+      tetherPylons = [];
+      for (let i = 0; i < 4; i++) {
+        tetherPrisms.push({
+          x: W * (0.2 + Math.random() * 0.6),
+          y: -100 - i * 160,
+          radius: 14,
+          sliced: false
+        });
+      }
+      for (let i = 0; i < 2; i++) {
+        tetherPylons.push({
+          x: W * 0.5,
+          y: -250 - i * 380,
+          w: 40,
+          h: 40
+        });
+      }
+    }
+
+    // 1: CHRONO RIFT
+    let chronoGates = [];
+    function initChronoRift() {
+      chronoGates = [];
+      for (let i = 0; i < 5; i++) {
+        chronoGates.push({
+          yFuture: 100 + i * 140,
+          yPresent: -140 + i * 140,
+          breached: false,
+          targetHoleX: W * (0.15 + Math.random() * 0.7)
+        });
+      }
+    }
+
+    // 2: DIMENSION BREACH
+    let breachBall = { x: W * 0.25, y: H * 0.5, vx: 180, vy: -240, r: 10 };
+    let breachWindowY = H * 0.5;
+    let breachWindowSize = 120;
+    let breachDir = 1;
+    function initDimensionBreach() {
+      breachBall = { x: W * 0.25, y: H * 0.5, vx: 190, vy: -260, r: 10 };
+      breachWindowY = H * 0.45;
+    }
+
+    // 3: STROOP OVERRIDE
+    const STROOP_WORDS = ["RED", "CYAN", "LIME", "GOLD"];
+    const STROOP_COLORS = ["#FF0055", "#00F0FF", "#00FF88", "#FFD700"];
+    let stroopState = {
+      cardWord: "CYAN",
+      cardColor: "#FF0055",
+      correctIndex: 0,
+      timer: 1.0,
+      scoreFlash: 0
+    };
+    let stroopWalls = [];
+    function initStroopOverride() {
+      generateNewStroopCard();
+      stroopWalls = [];
+      for (let i = 0; i < 4; i++) {
+        stroopWalls.push({
+          y: 100 + i * 170,
+          locked: true,
+          color: STROOP_COLORS[i % 4]
+        });
+      }
+    }
+
+    function generateNewStroopCard() {
+      const wIdx = Math.floor(Math.random() * 4);
+      let cIdx = Math.floor(Math.random() * 4);
+      if (cIdx === wIdx) cIdx = (cIdx + 1) % 4; // ensure conflict
+      stroopState.cardWord = STROOP_WORDS[wIdx];
+      stroopState.cardColor = STROOP_COLORS[cIdx];
+      stroopState.correctIndex = cIdx;
+      stroopState.timer = 1.0;
+    }
+
+    // 4: POLARITY GRAVITON
+    let gravitonParticles = [];
+    function initPolarityGraviton() {
+      gravitonParticles = [];
+      for (let i = 0; i < 8; i++) {
+        gravitonParticles.push({
+          x: W * (0.15 + Math.random() * 0.7),
+          y: -50 - i * 90,
+          charge: Math.random() > 0.5 ? -1 : 1,
+          radius: 8
+        });
+      }
+    }
+
+    // 5: SYNAPSE BEAT
+    let beatCompassAngle = 0;
+    let beatShockwaves = [];
+    let beatNotes = [];
+    let lastBeatHitTime = 0;
+    function initSynapseBeat() {
+      beatCompassAngle = 0;
+      beatShockwaves = [];
+      beatNotes = [];
+      for (let i = 0; i < 6; i++) {
+        beatNotes.push({
+          x: W * (0.6 + Math.sin(i * 0.8) * 0.25),
+          y: -50 - i * 120,
+          collected: false
+        });
+      }
+    }
+
+    function switchModeSimulation(idx) {
+      activeModeIndex = idx;
+      simTime = 0;
+      particles = [];
+      if (idx === 0) initQuantumTether();
+      else if (idx === 1) initChronoRift();
+      else if (idx === 2) initDimensionBreach();
+      else if (idx === 3) initStroopOverride();
+      else if (idx === 4) initPolarityGraviton();
+      else if (idx === 5) initSynapseBeat();
+    }
+
+    // --- MAIN RENDER & SIMULATION LOOP ---
+    let lastFrameTime = performance.now();
+
+    function renderLoop(now) {
+      requestAnimationFrame(renderLoop);
+      const rawDt = (now - lastFrameTime) / 1000;
+      lastFrameTime = now;
+      const dt = Math.min(rawDt, 0.05) * simSpeed;
+      simTime += dt;
+
+      // Clear Canvas
+      ctx.fillStyle = '#06070B';
+      ctx.fillRect(0, 0, W, H);
+
+      // Draw Center Split Seam
+      drawCenterSeam(ctx);
+
+      // Update Auto-Demo if active
+      if (isAutoDemo) {
+        updateAutoDemoInputs(simTime);
+      } else {
+        updateKeyboardInputs(dt);
+      }
+
+      // Update On-Screen Thumb Ring Indicators
+      updateThumbDOM();
+
+      // Render Active Game Mode
+      if (activeModeIndex === 0) renderQuantumTether(dt);
+      else if (activeModeIndex === 1) renderChronoRift(dt);
+      else if (activeModeIndex === 2) renderDimensionBreach(dt);
+      else if (activeModeIndex === 3) renderStroopOverride(dt);
+      else if (activeModeIndex === 4) renderPolarityGraviton(dt);
+      else if (activeModeIndex === 5) renderSynapseBeat(dt);
+
+      // Update & Draw Global Particles
+      renderParticles(dt);
+
+      // Draw Top Mini HUD Overlay
+      drawMiniHUD(ctx);
+    }
+
+    // --- SPLIT DIVIDER SEAM ---
+    function drawCenterSeam(ctx) {
+      const cx = W * 0.5;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(cx, 0);
+      ctx.lineTo(cx, H);
+      ctx.stroke();
+      ctx.restore();
+
+      // Central Glitch Diamond Badge at center
+      const cy = H * 0.5;
+      ctx.save();
+      ctx.fillStyle = '#00F0FF';
+      ctx.beginPath();
+      ctx.moveTo(cx - 6, cy);
+      ctx.lineTo(cx, cy - 8);
+      ctx.lineTo(cx, cy + 8);
+      ctx.fill();
+
+      ctx.fillStyle = '#FF0055';
+      ctx.beginPath();
+      ctx.moveTo(cx + 6, cy);
+      ctx.lineTo(cx, cy - 8);
+      ctx.lineTo(cx, cy + 8);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // --- INPUT UPDATERS ---
+    function updateAutoDemoInputs(t) {
+      // Natural fluid lissajous motion for demonstration
+      if (activeModeIndex === 0) { // Quantum Tether
+        inputState.left.x = W * 0.25 + Math.sin(t * 2.2) * 45;
+        inputState.left.y = H * 0.65 + Math.cos(t * 1.8) * 60;
+        inputState.right.x = W * 0.75 + Math.cos(t * 2.0) * 45;
+        inputState.right.y = H * 0.65 + Math.sin(t * 1.5) * 60;
+      } else if (activeModeIndex === 1) { // Chrono Rift
+        inputState.left.x = W * 0.25 + Math.sin(t * 1.7) * 45;
+        inputState.left.y = H * 0.70;
+        inputState.right.x = W * 0.75 + Math.sin((t + 2.0) * 1.7) * 45;
+        inputState.right.y = H * 0.70;
+      } else if (activeModeIndex === 2) { // Dimension Breach
+        // Paddles follow ball y
+        inputState.left.x = W * 0.15;
+        inputState.left.y = breachBall.x < W * 0.5 ? breachBall.y : H * 0.6;
+        inputState.right.x = W * 0.85;
+        inputState.right.y = breachBall.x >= W * 0.5 ? breachBall.y : H * 0.4;
+      } else if (activeModeIndex === 3) { // Stroop Override
+        inputState.left.x = W * 0.25;
+        inputState.left.y = H * 0.72;
+        inputState.right.x = W * 0.75 + Math.sin(t * 3.0) * 35;
+        inputState.right.y = H * 0.72;
+      } else if (activeModeIndex === 4) { // Polarity Graviton
+        const pull = Math.sin(t * 2.0) * 30;
+        inputState.left.x = W * 0.28 + pull;
+        inputState.left.y = H * 0.68 + Math.cos(t * 1.6) * 40;
+        inputState.right.x = W * 0.72 - pull;
+        inputState.right.y = H * 0.68 + Math.sin(t * 1.6) * 40;
+      } else if (activeModeIndex === 5) { // Synapse Beat
+        inputState.left.x = W * 0.25;
+        inputState.left.y = H * 0.68;
+        inputState.right.x = W * 0.75 + Math.sin(t * 2.5) * 50;
+        inputState.right.y = H * 0.68;
+      }
+    }
+
+    function updateKeyboardInputs(dt) {
+      const speed = 260 * dt;
+      // Left Hand: WASD
+      if (inputState.keys['KeyA']) inputState.left.x = Math.max(30, inputState.left.x - speed);
+      if (inputState.keys['KeyD']) inputState.left.x = Math.min(W * 0.46, inputState.left.x + speed);
+      if (inputState.keys['KeyW']) inputState.left.y = Math.max(80, inputState.left.y - speed);
+      if (inputState.keys['KeyS']) inputState.left.y = Math.min(H - 60, inputState.left.y + speed);
+
+      // Right Hand: Arrow Keys
+      if (inputState.keys['ArrowLeft']) inputState.right.x = Math.max(W * 0.54, inputState.right.x - speed);
+      if (inputState.keys['ArrowRight']) inputState.right.x = Math.min(W - 30, inputState.right.x + speed);
+      if (inputState.keys['ArrowUp']) inputState.right.y = Math.max(80, inputState.right.y - speed);
+      if (inputState.keys['ArrowDown']) inputState.right.y = Math.min(H - 60, inputState.right.y + speed);
+    }
+
+    function updateThumbDOM() {
+      const tL = document.getElementById('thumbLeft');
+      const tR = document.getElementById('thumbRight');
+      tL.style.display = 'flex';
+      tR.style.display = 'flex';
+      tL.style.left = inputState.left.x + 'px';
+      tL.style.top = inputState.left.y + 'px';
+      tR.style.left = inputState.right.x + 'px';
+      tR.style.top = inputState.right.y + 'px';
+    }
+
+    // ==========================================
+    // MODE 0: QUANTUM TETHER SIMULATION
+    // ==========================================
+    function renderQuantumTether(dt) {
+      const x1 = inputState.left.x;
+      const y1 = inputState.left.y;
+      const x2 = inputState.right.x;
+      const y2 = inputState.right.y;
+
+      // Draw Glowing Quantum Tether Laser Beam
+      const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+      grad.addColorStop(0, '#00F0FF');
+      grad.addColorStop(0.5, '#FFFFFF');
+      grad.addColorStop(1, '#FF0055');
+
+      // Outer Glow
+      ctx.save();
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 6 + Math.sin(simTime * 20) * 1.5;
+      ctx.shadowColor = '#00F0FF';
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      // Core Pure White Laser Wire
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2.2;
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+
+      // Nodes
+      drawGlowNode(ctx, x1, y1, '#00F0FF', 'L');
+      drawGlowNode(ctx, x2, y2, '#FF0055', 'R');
+
+      // Descend & Slice Prism Crystals
+      tetherPrisms.forEach(p => {
+        p.y += 180 * dt;
+        if (p.y > H + 50) {
+          p.y = -60;
+          p.x = W * (0.15 + Math.random() * 0.7);
+          p.sliced = false;
+        }
+
+        // Segment-Circle Collision test against laser
+        if (!p.sliced) {
+          const d = distToSegment({ x: p.x, y: p.y }, { x: x1, y: y1 }, { x: x2, y: y2 });
+          if (d < p.radius + 4 && p.y > 60 && p.y < H - 40) {
+            p.sliced = true;
+            spawnParticles(p.x, p.y, '#00FF88', 16, 160);
+            playSynthTone(580 + Math.random() * 200, 'triangle', 0.12, 0.25);
+          }
+        }
+
+        // Draw Prism
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(simTime * 2);
+        if (p.sliced) {
+          ctx.strokeStyle = 'rgba(0, 255, 136, 0.4)';
+          ctx.strokeRect(-8, -8, 16, 16);
+        } else {
+          ctx.fillStyle = '#00FF88';
+          ctx.shadowColor = '#00FF88';
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.moveTo(0, -12);
+          ctx.lineTo(12, 0);
+          ctx.lineTo(0, 12);
+          ctx.lineTo(-12, 0);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+
+      // Descend Dark Matter Pylons
+      tetherPylons.forEach(py => {
+        py.y += 140 * dt;
+        if (py.y > H + 60) {
+          py.y = -100;
+          py.x = W * 0.5 + (Math.random() - 0.5) * 100;
+        }
+
+        ctx.save();
+        ctx.fillStyle = '#180408';
+        ctx.strokeStyle = '#FF003C';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#FF003C';
+        ctx.shadowBlur = 10;
+        ctx.fillRect(py.x - py.w/2, py.y - py.h/2, py.w, py.h);
+        ctx.strokeRect(py.x - py.w/2, py.y - py.h/2, py.w, py.h);
+
+        // Warning Hazard Stripes
+        ctx.fillStyle = '#FF003C';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('PYLON', py.x, py.y + 3);
+        ctx.restore();
+      });
+    }
+
+    function distToSegment(p, v, w) {
+      const l2 = (v.x - w.x) * (v.x - w.x) + (v.y - w.y) * (v.y - w.y);
+      if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+      let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+    }
+
+    // ==========================================
+    // MODE 1: CHRONO RIFT SIMULATION
+    // ==========================================
+    function renderChronoRift(dt) {
+      // Future Right Side scanlines
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 0, 85, 0.04)';
+      ctx.fillRect(W * 0.5, 0, W * 0.5, H);
+      ctx.fillStyle = 'rgba(255, 0, 85, 0.15)';
+      ctx.font = '9px monospace';
+      ctx.fillText('[FUTURE +2.0s]', W * 0.56, 48);
+      ctx.fillText('[PRESENT 0.0s]', W * 0.08, 48);
+      ctx.restore();
+
+      // Render Chrono Gates
+      chronoGates.forEach(g => {
+        g.yFuture += 120 * dt;
+        g.yPresent += 120 * dt;
+        if (g.yFuture > H + 50) g.yFuture = -80;
+        if (g.yPresent > H + 50) {
+          g.yPresent = -80;
+          g.breached = false;
+        }
+
+        // Right Future Side: Hacker Reticle unlocks the gate
+        const distFuture = Math.hypot(inputState.right.x - g.targetHoleX, inputState.right.y - g.yFuture);
+        if (distFuture < 45 && !g.breached) {
+          g.breached = true;
+          spawnParticles(g.targetHoleX, g.yFuture, '#FF0055', 10, 80);
+          playSynthTone(740, 'sine', 0.08, 0.15);
+        }
+
+        // Draw Future Wireframe Gate
+        ctx.save();
+        ctx.strokeStyle = g.breached ? 'rgba(0, 255, 136, 0.6)' : 'rgba(255, 0, 85, 0.7)';
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(W * 0.52, g.yFuture, W * 0.45, 18);
+        ctx.setLineDash([]);
+        // Gate Hole Aperture
+        if (g.breached) {
+          ctx.fillStyle = 'rgba(0, 255, 136, 0.3)';
+          ctx.fillRect(W * 0.52, g.yFuture, W * 0.45, 18);
+        }
+        ctx.restore();
+
+        // Draw Present Physical Gate
+        ctx.save();
+        if (g.breached) {
+          // Open Green Gate
+          ctx.strokeStyle = '#00FF88';
+          ctx.strokeRect(W * 0.05, g.yPresent, W * 0.42, 18);
+          ctx.fillStyle = 'rgba(0, 255, 136, 0.15)';
+          ctx.fillRect(W * 0.05, g.yPresent, W * 0.42, 18);
+        } else {
+          // Locked Hazard Red Wall
+          ctx.fillStyle = 'rgba(255, 30, 66, 0.7)';
+          ctx.fillRect(W * 0.05, g.yPresent, W * 0.42, 18);
+          ctx.strokeStyle = '#FF1E42';
+          ctx.strokeRect(W * 0.05, g.yPresent, W * 0.42, 18);
+        }
+        ctx.restore();
+      });
+
+      // Draw Present Ship (Left) and Future Ghost (Right)
+      drawGlowNode(ctx, inputState.left.x, inputState.left.y, '#00F0FF', 'SHIP');
+      drawGlowNode(ctx, inputState.right.x, inputState.right.y, '#FF0055', 'HACK');
+    }
+
+    // ==========================================
+    // MODE 2: DIMENSION BREACH SIMULATION
+    // ==========================================
+    function renderDimensionBreach(dt) {
+      // Center Divider Slit Window
+      breachWindowY += 100 * dt * breachDir;
+      if (breachWindowY > H * 0.75) breachDir = -1;
+      if (breachWindowY < H * 0.25) breachDir = 1;
+
+      // Draw Center Seam with Open Slit Window
+      const cx = W * 0.5;
+      ctx.save();
+      // Blocked Wall Segments
+      ctx.strokeStyle = '#FF1E42';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(cx, 0);
+      ctx.lineTo(cx, breachWindowY - breachWindowSize/2);
+      ctx.moveTo(cx, breachWindowY + breachWindowSize/2);
+      ctx.lineTo(cx, H);
+      ctx.stroke();
+
+      // Open Permeable Breach Window
+      ctx.strokeStyle = '#00FF88';
+      ctx.shadowColor = '#00FF88';
+      ctx.shadowBlur = 14;
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(cx, breachWindowY - breachWindowSize/2);
+      ctx.lineTo(cx, breachWindowY + breachWindowSize/2);
+      ctx.stroke();
+      ctx.restore();
+
+      // Physics update on Ball
+      // Left Side: Inverted Gravity (Flows UPWARDS)
+      if (breachBall.x < cx) {
+        breachBall.vy -= 260 * dt; // Anti-gravity upward
+        // Left Paddle Collision
+        if (Math.hypot(breachBall.x - inputState.left.x, breachBall.y - inputState.left.y) < 28) {
+          breachBall.vx = Math.abs(breachBall.vx);
+          breachBall.vy += 180;
+          spawnParticles(breachBall.x, breachBall.y, '#00F0FF', 14, 150);
+          playSynthTone(520, 'triangle', 0.1, 0.25);
+        }
+      } else {
+        // Right Side: Normal Heavy Gravity (Flows DOWNWARDS)
+        breachBall.vy += 260 * dt; // Downward gravity
+        // Right Paddle Collision
+        if (Math.hypot(breachBall.x - inputState.right.x, breachBall.y - inputState.right.y) < 28) {
+          breachBall.vx = -Math.abs(breachBall.vx);
+          breachBall.vy -= 180;
+          spawnParticles(breachBall.x, breachBall.y, '#FF0055', 14, 150);
+          playSynthTone(680, 'triangle', 0.1, 0.25);
+        }
+      }
+
+      breachBall.x += breachBall.vx * dt;
+      breachBall.y += breachBall.vy * dt;
+
+      // Bounce off screen edges
+      if (breachBall.y < 30) { breachBall.y = 30; breachBall.vy = Math.abs(breachBall.vy); }
+      if (breachBall.y > H - 30) { breachBall.y = H - 30; breachBall.vy = -Math.abs(breachBall.vy); }
+      if (breachBall.x < 20) { breachBall.x = 20; breachBall.vx = Math.abs(breachBall.vx); }
+      if (breachBall.x > W - 20) { breachBall.x = W - 20; breachBall.vx = -Math.abs(breachBall.vx); }
+
+      // Crossing center divider: Check if through slit or bounce wall
+      if (Math.abs(breachBall.x - cx) < 8) {
+        const inWindow = Math.abs(breachBall.y - breachWindowY) < breachWindowSize/2;
+        if (!inWindow) {
+          breachBall.vx = -breachBall.vx; // Wall deflection
+          spawnParticles(cx, breachBall.y, '#FF1E42', 12, 100);
+          playSynthTone(220, 'sawtooth', 0.1, 0.2);
+        } else {
+          // Breached through window!
+          spawnParticles(cx, breachBall.y, '#00FF88', 20, 200);
+          playSynthTone(920, 'sine', 0.15, 0.3);
+        }
+      }
+
+      // Draw Paddles
+      drawPaddle(ctx, inputState.left.x, inputState.left.y, '#00F0FF', 40);
+      drawPaddle(ctx, inputState.right.x, inputState.right.y, '#FF0055', 40);
+
+      // Draw Singularity Ball
+      ctx.save();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.shadowColor = breachBall.x < cx ? '#00F0FF' : '#FF0055';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.arc(breachBall.x, breachBall.y, breachBall.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawPaddle(ctx, x, y, color, size) {
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 14;
+      ctx.fillRect(x - 5, y - size/2, 10, size);
+      ctx.restore();
+    }
+
+    // ==========================================
+    // MODE 3: STROOP OVERRIDE SIMULATION
+    // ==========================================
+    function renderStroopOverride(dt) {
+      stroopState.timer -= dt * 0.8;
+      if (stroopState.timer <= 0) {
+        generateNewStroopCard();
+        spawnParticles(W * 0.25, H * 0.35, stroopState.cardColor, 12, 100);
+        playSynthTone(440, 'triangle', 0.08, 0.15);
+      }
+
+      // Left Hemisphere: Cognitive Stroop Card
+      ctx.save();
+      ctx.fillStyle = '#0F131D';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.strokeRect(20, H * 0.22, W * 0.42, 160);
+      ctx.fillRect(20, H * 0.22, W * 0.42, 160);
+
+      ctx.fillStyle = '#7E869E';
+      ctx.font = '8px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('STROOP OVERRIDE KEY', W * 0.25, H * 0.26);
+
+      // The Cognitive Conflict Text
+      ctx.fillStyle = stroopState.cardColor; // The INK color!
+      ctx.shadowColor = stroopState.cardColor;
+      ctx.shadowBlur = 12;
+      ctx.font = 'bold 22px Space Grotesk';
+      ctx.fillText(stroopState.cardWord, W * 0.25, H * 0.34);
+
+      // Timer Bar
+      ctx.fillStyle = '#00F0FF';
+      ctx.fillRect(26, H * 0.39, (W * 0.42 - 12) * Math.max(0, stroopState.timer), 4);
+
+      // 4 Choice Buttons below
+      const btnW = 30;
+      for (let i = 0; i < 4; i++) {
+        const bx = 32 + i * 36;
+        const by = H * 0.42;
+        ctx.fillStyle = STROOP_COLORS[i];
+        ctx.beginPath();
+        ctx.arc(bx + 10, by + 10, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Right Hemisphere: Kinetic Speed Tunnel & Gates
+      stroopWalls.forEach(w => {
+        w.y += 200 * dt;
+        if (w.y > H + 40) {
+          w.y = -60;
+          w.locked = Math.random() > 0.4;
+        }
+
+        ctx.save();
+        if (w.locked) {
+          ctx.fillStyle = w.color;
+          ctx.shadowColor = w.color;
+          ctx.shadowBlur = 12;
+          ctx.fillRect(W * 0.54, w.y, W * 0.42, 16);
+          ctx.fillStyle = '#000';
+          ctx.font = 'bold 9px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('LOCK', W * 0.75, w.y + 11);
+        } else {
+          ctx.strokeStyle = 'rgba(0, 255, 136, 0.4)';
+          ctx.setLineDash([4, 4]);
+          ctx.strokeRect(W * 0.54, w.y, W * 0.42, 16);
+        }
+        ctx.restore();
+      });
+
+      // Right Runner
+      drawGlowNode(ctx, inputState.right.x, inputState.right.y, '#FF0055', 'RUNNER');
+    }
+
+    // ==========================================
+    // MODE 4: POLARITY GRAVITON SIMULATION
+    // ==========================================
+    function renderPolarityGraviton(dt) {
+      const cx = W * 0.5;
+      const x1 = inputState.left.x;
+      const y1 = inputState.left.y;
+      const x2 = inputState.right.x;
+      const y2 = inputState.right.y;
+
+      // Magnetic Attraction Arc Lines connecting cores
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+      ctx.lineWidth = 1.5;
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.quadraticCurveTo(cx, ((y1 + y2)/2) + i * 25, x2, y2);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Draw Cores with (-) and (+) signs
+      drawGlowNode(ctx, x1, y1, '#00F0FF', '(-)');
+      drawGlowNode(ctx, x2, y2, '#FF0055', '(+)');
+
+      // Descend Graviton Charged Particles
+      gravitonParticles.forEach(gp => {
+        gp.y += 160 * dt;
+        if (gp.y > H + 40) {
+          gp.y = -40;
+          gp.x = W * (0.15 + Math.random() * 0.7);
+          gp.charge = Math.random() > 0.5 ? -1 : 1;
+        }
+
+        const isNeg = gp.charge === -1;
+        const color = isNeg ? '#00F0FF' : '#FF0055';
+
+        // Attraction check to nodes
+        const dLeft = Math.hypot(gp.x - x1, gp.y - y1);
+        const dRight = Math.hypot(gp.x - x2, gp.y - y2);
+
+        if (isNeg && dLeft < 26) {
+          gp.y = -60;
+          spawnParticles(x1, y1, '#00F0FF', 14, 140);
+          playSynthTone(540, 'sine', 0.1, 0.2);
+        } else if (!isNeg && dRight < 26) {
+          gp.y = -60;
+          spawnParticles(x2, y2, '#FF0055', 14, 140);
+          playSynthTone(720, 'sine', 0.1, 0.2);
+        }
+
+        // Draw particle
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(gp.x, gp.y, gp.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(isNeg ? '-' : '+', gp.x, gp.y + 3);
+        ctx.restore();
+      });
+    }
+
+    // ==========================================
+    // MODE 5: SYNAPSE BEAT SIMULATION
+    // ==========================================
+    function renderSynapseBeat(dt) {
+      beatCompassAngle += dt * 3.8;
+      if (beatCompassAngle > Math.PI * 2) {
+        beatCompassAngle -= Math.PI * 2;
+        // Trigger Beat Pulse
+        beatShockwaves.push({ r: 10, alpha: 1.0 });
+        playBassKick();
+      }
+
+      // Left Hemisphere: Radial Beat Compass
+      const bx = W * 0.25;
+      const by = H * 0.65;
+
+      // Draw Shockwaves
+      beatShockwaves.forEach((sw, idx) => {
+        sw.r += 140 * dt;
+        sw.alpha -= 1.4 * dt;
+        if (sw.alpha > 0) {
+          ctx.save();
+          ctx.strokeStyle = `rgba(0, 240, 255, ${sw.alpha})`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(bx, by, sw.r, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      });
+      beatShockwaves = beatShockwaves.filter(sw => sw.alpha > 0);
+
+      // Draw Compass Dial
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(bx, by, 45, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Hand Dial
+      const hx = bx + Math.cos(beatCompassAngle) * 45;
+      const hy = by + Math.sin(beatCompassAngle) * 45;
+      ctx.strokeStyle = '#00F0FF';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(hx, hy);
+      ctx.stroke();
+
+      ctx.fillStyle = '#00F0FF';
+      ctx.shadowColor = '#00F0FF';
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.arc(bx, by, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Right Hemisphere: Sinuous Harmonic Melody Wave
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 0, 85, 0.6)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let y = 50; y < H - 50; y += 10) {
+        const x = W * 0.75 + Math.sin((y * 0.02) + simTime * 4) * 40;
+        if (y === 50) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // Draw Floating Synth Notes
+      beatNotes.forEach(n => {
+        n.y += 150 * dt;
+        if (n.y > H + 40) {
+          n.y = -40;
+          n.x = W * (0.6 + Math.random() * 0.3);
+          n.collected = false;
+        }
+
+        if (!n.collected && Math.hypot(n.x - inputState.right.x, n.y - inputState.right.y) < 24) {
+          n.collected = true;
+          spawnParticles(n.x, n.y, '#FF0055', 14, 150);
+          playSynthTone(440 + ((n.x % 100) * 4), 'sine', 0.12, 0.25);
+        }
+
+        if (!n.collected) {
+          ctx.save();
+          ctx.fillStyle = '#FFD700';
+          ctx.shadowColor = '#FFD700';
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, 7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+
+      // Wave-Rider Ship
+      drawGlowNode(ctx, inputState.right.x, inputState.right.y, '#FF0055', 'RIDER');
+    }
+
+    // --- DRAW HELPERS ---
+    function drawGlowNode(ctx, x, y, color, label) {
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.arc(x, y, 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, x, y + 3);
+      ctx.restore();
+    }
+
+    function renderParticles(dt) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= p.decay * dt;
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+        ctx.save();
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function drawMiniHUD(ctx) {
+      ctx.save();
+      // HUD Pill at top center
+      ctx.fillStyle = 'rgba(10, 13, 20, 0.75)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.strokeRect(W * 0.25, 14, W * 0.5, 22);
+      ctx.fillRect(W * 0.25, 14, W * 0.5, 22);
+
+      ctx.fillStyle = '#00F0FF';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(MODES_DATA[activeModeIndex].name, W * 0.5, 28);
+      ctx.restore();
+    }
+
+    // --- UI INTERACTION CONTROLS ---
+    function selectMode(idx) {
+      activeModeIndex = idx;
+      // Update Tab Styles
+      document.querySelectorAll('.tab-item').forEach((el, i) => {
+        el.classList.toggle('active', i === idx);
+      });
+      // Populate Details Card
+      populateDetailCard(idx);
+      // Switch Simulation
+      switchModeSimulation(idx);
+    }
+
+    function populateDetailCard(idx) {
+      const m = MODES_DATA[idx];
+      const card = document.getElementById('modeDetailCard');
+      card.innerHTML = `
+        <div class="card-header-block">
+          <div class="mode-badge-row">
+            <span class="mode-badge">${m.badge}</span>
+            <span class="mode-friction-metric">🧠 Cognitive Friction: ${m.friction}</span>
+          </div>
+          <h2 class="mode-hero-name">${m.name}</h2>
+          <p class="mode-pitch-tagline">${m.pitch}</p>
+        </div>
+
+        <div class="hands-grid">
+          <div class="hand-card left-hand">
+            <div class="hand-card-header">
+              <span class="hand-tag">Left Thumb</span>
+              <span class="hand-badge-role">Hemisphere 1</span>
+            </div>
+            <div class="hand-role-title">${m.leftHand.role}</div>
+            <div class="hand-desc">${m.leftHand.desc}</div>
+          </div>
+          <div class="hand-card right-hand">
+            <div class="hand-card-header">
+              <span class="hand-tag">Right Thumb</span>
+              <span class="hand-badge-role">Hemisphere 2</span>
+            </div>
+            <div class="hand-role-title">${m.rightHand.role}</div>
+            <div class="hand-desc">${m.rightHand.desc}</div>
+          </div>
+        </div>
+
+        <div class="mindfuck-box">
+          <div class="mindfuck-header">
+            <span>⚡ THE SPLIT-BRAIN COGNITIVE FRICTION</span>
+          </div>
+          <div class="mindfuck-body">${m.mindfuck}</div>
+        </div>
+
+        <div class="feature-points">
+          ${m.bullets.map(b => `
+            <div class="feat-item">
+              <div class="feat-label">${b.label}</div>
+              <div class="feat-val">${b.val}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      // Update Vote button text
+      const btnVote = document.getElementById('btnVoteMode');
+      if (votes[idx] > 0) {
+        btnVote.classList.add('voted');
+        btnVote.innerHTML = `<span>✓ VOTED (${votes[idx]} VOTE)</span>`;
+      } else {
+        btnVote.classList.remove('voted');
+        btnVote.innerHTML = `<span>★ VOTE FOR ${m.name}</span>`;
+      }
+    }
+
+    function toggleAutoDemo() {
+      isAutoDemo = !isAutoDemo;
+      const btn = document.getElementById('btnAutoDemo');
+      const icon = document.getElementById('autoDemoIcon');
+      btn.classList.toggle('active', isAutoDemo);
+      icon.textContent = isAutoDemo ? '🤖' : '🎮';
+      btn.innerHTML = `${icon.outerHTML} ${isAutoDemo ? 'Auto-Pilot Sim' : 'Manual Play'}`;
+    }
+
+    function cycleSpeed() {
+      if (simSpeed === 1.0) simSpeed = 1.5;
+      else if (simSpeed === 1.5) simSpeed = 0.5;
+      else simSpeed = 1.0;
+      document.getElementById('speedLabel').textContent = simSpeed.toFixed(1) + 'x';
+    }
+
+    function toggleAudioSynth() {
+      isSoundOn = !isSoundOn;
+      if (isSoundOn) getAudioContext();
+      const btn = document.getElementById('btnSound');
+      btn.classList.toggle('active-sound', isSoundOn);
+      document.getElementById('soundLabel').textContent = isSoundOn ? 'ON' : 'OFF';
+      if (isSoundOn) playSynthTone(600, 'sine', 0.15, 0.2);
+    }
+
+    function castVote() {
+      votes[activeModeIndex]++;
+      const btn = document.getElementById('btnVoteMode');
+      btn.classList.add('voted');
+      btn.innerHTML = `<span>✓ VOTED FOR ${MODES_DATA[activeModeIndex].name}!</span>`;
+      playSynthTone(880, 'triangle', 0.25, 0.3);
+      spawnParticles(W * 0.5, H * 0.5, '#00FF88', 25, 200);
+    }
+
+    // --- CANVAS TOUCH & DRAG LISTENERS ---
+    let isDraggingLeft = false;
+    let isDraggingRight = false;
+
+    function handlePointer(e, isDown) {
+      if (isAutoDemo && isDown) {
+        // User touched canvas -> switch to manual play
+        toggleAutoDemo();
+      }
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const touches = e.touches ? e.touches : [e];
+
+      for (let i = 0; i < touches.length; i++) {
+        const touch = touches[i];
+        const px = (touch.clientX - rect.left) * scaleX;
+        const py = (touch.clientY - rect.top) * scaleY;
+
+        if (px < W * 0.5) {
+          inputState.left.x = Math.max(25, Math.min(W * 0.48, px));
+          inputState.left.y = Math.max(40, Math.min(H - 40, py));
+          inputState.left.active = isDown;
+        } else {
+          inputState.right.x = Math.max(W * 0.52, Math.min(W - 25, px));
+          inputState.right.y = Math.max(40, Math.min(H - 40, py));
+          inputState.right.active = isDown;
+        }
+      }
+    }
+
+    canvas.addEventListener('mousedown', e => handlePointer(e, true));
+    canvas.addEventListener('mousemove', e => { if (e.buttons > 0) handlePointer(e, true); });
+    canvas.addEventListener('mouseup', e => handlePointer(e, false));
+
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); handlePointer(e, true); }, { passive: false });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); handlePointer(e, true); }, { passive: false });
+    canvas.addEventListener('touchend', e => { e.preventDefault(); handlePointer(e, false); }, { passive: false });
+
+    // Keyboard Listeners
+    window.addEventListener('keydown', e => {
+      inputState.keys[e.code] = true;
+      if (isAutoDemo && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        toggleAutoDemo();
+      }
+    });
+    window.addEventListener('keyup', e => {
+      inputState.keys[e.code] = false;
+    });
+
+    // Initialize First Mode
+    selectMode(0);
+    requestAnimationFrame(renderLoop);
+  </script>
+</body>
+</html>

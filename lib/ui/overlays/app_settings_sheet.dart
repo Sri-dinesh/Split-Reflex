@@ -662,43 +662,58 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                                 ),
                               ),
                               const SizedBox(height: 10.0),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildChoiceButton(
-                                      icon: Icons.bolt_rounded,
-                                      label: '2-Hands Strict',
-                                      sublabel:
-                                          'Dual failure triggers game over',
-                                      isSelected:
-                                          controller.playMode ==
-                                          PlayHandMode.twoHands,
-                                      onTap: () {
-                                        controller.setPlayMode(
-                                          PlayHandMode.twoHands,
-                                        );
-                                        setState(() {});
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8.0),
-                                  Expanded(
-                                    child: _buildChoiceButton(
-                                      icon: Icons.shield_outlined,
-                                      label: '1-Hand Survival',
-                                      sublabel: 'Surviving side keeps going',
-                                      isSelected:
-                                          controller.playMode ==
-                                          PlayHandMode.oneHand,
-                                      onTap: () {
-                                        controller.setPlayMode(
-                                          PlayHandMode.oneHand,
-                                        );
-                                        setState(() {});
-                                      },
-                                    ),
-                                  ),
-                                ],
+                              Builder(
+                                builder: (context) {
+                                  final bool isPong =
+                                      controller.gamePairMode ==
+                                      GamePairMode.dimensionBreach;
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildChoiceButton(
+                                          icon: Icons.bolt_rounded,
+                                          label: '2-Hands Strict',
+                                          sublabel: isPong
+                                              ? 'Dual paddles required for Pong'
+                                              : 'Dual failure triggers game over',
+                                          isSelected:
+                                              controller.playMode ==
+                                              PlayHandMode.twoHands,
+                                          onTap: () {
+                                            controller.setPlayMode(
+                                              PlayHandMode.twoHands,
+                                            );
+                                            setState(() {});
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8.0),
+                                      Expanded(
+                                        child: _buildChoiceButton(
+                                          icon: isPong
+                                              ? Icons.lock_outline_rounded
+                                              : Icons.shield_outlined,
+                                          label: '1-Hand Survival',
+                                          sublabel: isPong
+                                              ? 'Disabled in Pong mode'
+                                              : 'Surviving side keeps going',
+                                          isSelected: !isPong &&
+                                              controller.playMode ==
+                                              PlayHandMode.oneHand,
+                                          isEnabled: !isPong,
+                                          onTap: () {
+                                            if (!isPong) {
+                                              controller.setPlayMode(
+                                                PlayHandMode.oneHand,
+                                              );
+                                              setState(() {});
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                               const SizedBox(height: 14.0),
                               const Divider(color: Colors.white10, height: 1.0),
@@ -1222,23 +1237,30 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
     String? sublabel,
     required bool isSelected,
     required VoidCallback onTap,
+    bool isEnabled = true,
   }) {
     return InkWell(
-      onTap: () {
-        ProceduralAudioSynth.instance.playTap();
-        HapticChoreographer.instance.triggerTap();
-        onTap();
-      },
+      onTap: isEnabled
+          ? () {
+              ProceduralAudioSynth.instance.playTap();
+              HapticChoreographer.instance.triggerTap();
+              onTap();
+            }
+          : null,
       borderRadius: BorderRadius.circular(10.0),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
         decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.white.withOpacity(0.12)
-              : Colors.black26,
+          color: !isEnabled
+              ? Colors.white.withOpacity(0.02)
+              : (isSelected
+                  ? Colors.white.withOpacity(0.12)
+                  : Colors.black26),
           borderRadius: BorderRadius.circular(10.0),
           border: Border.all(
-            color: isSelected ? Colors.white : Colors.white12,
+            color: !isEnabled
+                ? Colors.white.withOpacity(0.05)
+                : (isSelected ? Colors.white : Colors.white12),
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
@@ -1247,13 +1269,17 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
             Icon(
               icon,
               size: 18,
-              color: isSelected ? Colors.white : Colors.white54,
+              color: !isEnabled
+                  ? Colors.white24
+                  : (isSelected ? Colors.white : Colors.white54),
             ),
             const SizedBox(height: 4.0),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white60,
+                color: !isEnabled
+                    ? Colors.white30
+                    : (isSelected ? Colors.white : Colors.white60),
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -1264,7 +1290,9 @@ class _AppSettingsSheetState extends State<AppSettingsSheet> {
                 sublabel,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: isSelected ? Colors.white70 : Colors.white24,
+                  color: !isEnabled
+                      ? Colors.white24
+                      : (isSelected ? Colors.white70 : Colors.white24),
                   fontSize: 9,
                 ),
               ),
