@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:split_brain/core/constants/physics_constants.dart';
 import 'package:split_brain/core/services/battery_telemetry_service.dart';
 import 'package:split_brain/core/services/procedural_audio_synth.dart';
 import 'package:split_brain/core/utils/math_utils.dart';
@@ -11,8 +12,7 @@ import 'package:split_brain/core/utils/seeded_rng.dart';
 import 'package:split_brain/engine/entities/dimension_breach_entity.dart';
 import 'package:split_brain/engine/entities/obstacle_entity.dart';
 import 'package:split_brain/engine/entities/particle_pool.dart';
-import 'package:split_brain/engine/entities/shield_ping_entity.dart';
-import 'package:split_brain/engine/entities/quantum_warp_entity.dart';
+import 'package:split_brain/engine/entities/tide_lock_entity.dart';
 import 'package:split_brain/engine/game_controller.dart';
 import 'package:split_brain/engine/hemisphere_state.dart';
 
@@ -357,7 +357,7 @@ void main() {
     });
 
     test(
-      'GamePairMode cycles properly through classic, dimensionBreach, pulseReflex',
+      'GamePairMode cycles properly through classic, dimensionBreach, tideLock',
       () {
         final controller = GameController();
         expect(controller.gamePairMode, equals(GamePairMode.classic));
@@ -374,14 +374,14 @@ void main() {
         );
 
         controller.cycleGamePairMode();
-        expect(controller.gamePairMode, equals(GamePairMode.pulseReflex));
+        expect(controller.gamePairMode, equals(GamePairMode.tideLock));
         expect(
           controller.hemisphereState.leftMechanic,
-          equals(HemisphereMechanic.shieldPing),
+          equals(HemisphereMechanic.tideSub),
         );
         expect(
           controller.hemisphereState.rightMechanic,
-          equals(HemisphereMechanic.quantumWarp),
+          equals(HemisphereMechanic.tideHarvester),
         );
 
         controller.cycleGamePairMode();
@@ -409,24 +409,149 @@ void main() {
       expect(breach.paddleLeftTargetY, equals(400.0)); // Center of playfield
     });
 
-    test('ShieldPing triggers precision deflection window and cools down', () {
-      final shield = ShieldPingEntity();
-      expect(shield.isDeflecting, isFalse);
-      shield.triggerPing();
-      expect(shield.isDeflecting, isTrue);
-      // After duration expires
-      shield.update(0.35);
-      expect(shield.isDeflecting, isFalse);
+    test('Tide Lock valve raises and drains the shared water level', () {
+      final tide = TideLockEntity();
+      tide.reset(screenHeight: 800.0, initialLevel: 0.4);
+
+      // Valve open: tide rises at tideRiseRate per second.
+      tide.update(
+        dt: 1.0,
+        screenHeight: 800.0,
+        subLaneLeft: 0.0,
+        subLaneWidth: 200.0,
+        buoyLaneLeft: 200.0,
+        buoyLaneWidth: 200.0,
+        subIsLeft: true,
+        subActive: true,
+        buoyActive: true,
+        valveHeld: true,
+        valveAuto: false,
+        valveAutoTime: 0.0,
+        inverted: false,
+        spawnEnabled: false,
+        allowDeaths: false,
+        attractPilot: false,
+        survivalTime: 0.0,
+        speedScale: 1.0,
+      );
+      final double risen = tide.level;
+      expect(risen, closeTo(0.4 + PhysicsConstants.tideRiseRate, 1e-6));
+      expect(tide.valveOpen, isTrue);
+
+      // Valve released: tide drains at tideDrainRate per second.
+      tide.update(
+        dt: 1.0,
+        screenHeight: 800.0,
+        subLaneLeft: 0.0,
+        subLaneWidth: 200.0,
+        buoyLaneLeft: 200.0,
+        buoyLaneWidth: 200.0,
+        subIsLeft: true,
+        subActive: true,
+        buoyActive: true,
+        valveHeld: false,
+        valveAuto: false,
+        valveAutoTime: 0.0,
+        inverted: false,
+        spawnEnabled: false,
+        allowDeaths: false,
+        attractPilot: false,
+        survivalTime: 0.0,
+        speedScale: 1.0,
+      );
+      expect(tide.level, closeTo(risen - PhysicsConstants.tideDrainRate, 1e-6));
+      expect(tide.valveOpen, isFalse);
+      expect(tide.level, inInclusiveRange(0.0, 1.0));
     });
 
-    test('QuantumWarp hops tracks instantaneously between left and right', () {
-      final warp = QuantumWarpEntity();
-      expect(warp.track, equals(QuantumTrack.left));
-      warp.warp();
-      expect(warp.track, equals(QuantumTrack.right));
-      warp.warp();
-      expect(warp.track, equals(QuantumTrack.left));
+    test('Tide Lock sub is crushed when an arch overlaps its flooded depth', () {
+      final tide = TideLockEntity();
+      tide.reset(screenHeight: 800.0, initialLevel: 0.4);
+
+      // Force a single arch directly on the sub's station with its lip well
+      // BELOW the hull depth — the high-riding hull sits inside the slab.
+      tide.arches.add(
+        TideArch(
+          xFactor: 0.5,
+          bottomY: tide.subY + 100.0, // lip below the hull → collision
+          widthFactor: 0.3,
+          direction: -1.0,
+        ),
+      );
+
+      final events = tide.update(
+        dt: 0.016,
+        screenHeight: 800.0,
+        subLaneLeft: 0.0,
+        subLaneWidth: 200.0,
+        buoyLaneLeft: 200.0,
+        buoyLaneWidth: 200.0,
+        subIsLeft: true,
+        subActive: true,
+        buoyActive: true,
+        valveHeld: false,
+        valveAuto: false,
+        valveAutoTime: 0.0,
+        inverted: false,
+        spawnEnabled: false,
+        allowDeaths: true,
+        attractPilot: false,
+        survivalTime: 0.0,
+        speedScale: 1.0,
+      );
+
+      expect(
+        events.any((e) => e.type == TideEventType.subCrushed),
+        isTrue,
+        reason: 'Arch over a high-riding sub must crush it',
+      );
+      expect(tide.arches, isEmpty, reason: 'Crushing arch is consumed');
     });
+
+    test(
+      'Tide Lock buoy feeds bulbs only when the tide lifts the surface to them',
+      () {
+        final tide = TideLockEntity();
+        tide.reset(screenHeight: 800.0, initialLevel: 0.0);
+
+        // Force a bulb exactly where the buoy floats at the current tide.
+        final TideBarnacle bulb = tide.barnacles.first;
+        bulb.xFactor = 0.5;
+        bulb.depthY = tide.buoyY;
+
+        final List<TideEvent> events = tide.update(
+          dt: 0.016,
+          screenHeight: 800.0,
+          subLaneLeft: 0.0,
+          subLaneWidth: 200.0,
+          buoyLaneLeft: 200.0,
+          buoyLaneWidth: 200.0,
+          subIsLeft: true,
+          subActive: true,
+          buoyActive: true,
+          valveHeld: false,
+          valveAuto: false,
+          valveAutoTime: 0.0,
+          inverted: false,
+          spawnEnabled: false,
+          allowDeaths: false,
+          attractPilot: false,
+          survivalTime: 0.0,
+          speedScale: 1.0,
+        );
+
+        expect(
+          events.any((e) => e.type == TideEventType.bulbFed),
+          isTrue,
+          reason: 'Bulb at the surface depth must feed the buoy',
+        );
+        // Respawned bulb must be parked away from the buoy's current tide.
+        expect(
+          (bulb.depthY - tide.buoyY).abs(),
+          greaterThan(800.0 * PhysicsConstants.tideBulbFeedRadiusFactor),
+        );
+      },
+    );
 
     test('DimensionBreachEntity updates ball physics and handles aperture breaches', () {
       final breach = DimensionBreachEntity();
@@ -645,21 +770,175 @@ void main() {
     });
 
     test(
-      'PulseReflex missed plasma bolt breaches shield and triggers death',
+      'TideLock arch collision during a run triggers hemisphere death',
       () {
         final controller = GameController();
         controller.updateDimensions(400.0, 800.0);
-        controller.setGamePairMode(GamePairMode.pulseReflex);
+        controller.setGamePairMode(GamePairMode.tideLock);
         controller.startRun();
         controller.tick(Duration.zero, 4.0); // Pass grace period
 
-        // Add a plasma bolt that has passed shield without deflection
-        controller.plasmaBolts.add(
-          PlasmaBolt(y: controller.shieldPing.y + 25.0, speed: 380.0),
+        // Force an arch straddling the sub's station with its lip below the
+        // hull — the high-riding hull cannot clear it.
+        final TideArch killerArch = TideArch(
+          xFactor: 0.5,
+          bottomY: controller.tideLock.subY + 100.0,
+          widthFactor: 0.3,
+          direction: -1.0,
+        );
+        controller.tideLock.arches.add(killerArch);
+        controller.tick(Duration.zero, 0.016);
+
+        expect(controller.state, equals(GamePlayState.deathSlowmo));
+        expect(
+          controller.latestAutopsy?.failedMechanic,
+          equals('TIDE SUB'),
+        );
+      },
+    );
+
+    test(
+      'TideLock urchin contact during a run triggers buoy death',
+      () {
+        final controller = GameController();
+        controller.updateDimensions(400.0, 800.0);
+        controller.setGamePairMode(GamePairMode.tideLock);
+        controller.startRun();
+        controller.tick(Duration.zero, 4.0); // Pass grace period
+
+        // Park an urchin directly under the buoy.
+        controller.tideLock.urchins.add(
+          TideUrchin(
+            xFactor: controller.tideLock.buoyXFactor,
+            y: controller.tideLock.buoyY,
+            vxFactor: 0.0,
+            radius: 10.0,
+            spinPhase: 0.0,
+          ),
         );
         controller.tick(Duration.zero, 0.016);
 
         expect(controller.state, equals(GamePlayState.deathSlowmo));
+        expect(
+          controller.latestAutopsy?.failedMechanic,
+          equals('TIDE HARVESTER'),
+        );
+      },
+    );
+
+    test(
+      'Tide Lock full-run smoke: valve drain, arch clears, 15s mutation swap',
+      () {
+        final controller = GameController();
+        controller.updateDimensions(400.0, 800.0);
+        controller.setGamePairMode(GamePairMode.tideLock);
+        controller.startRun();
+
+        // Scripted survival run:
+        //  - Valve never opens → tide drains to the basin floor, the sub sits
+        //    safely below every arch lip and all arches score on pass.
+        //  - The buoy actively dodges urchins flirting with the low surface
+        //    (it is ~4x faster than them, exactly as playable in real hands).
+        for (int i = 0; i < 940; i++) {
+          // ~15s @ 16ms
+          final TideLockEntity tide = controller.tideLock;
+
+          // 1-Hemisphere escape law: keep one side of the urchin clear.
+          double target = 0.5;
+          for (final TideUrchin u in tide.urchins) {
+            if ((u.y - tide.buoyY).abs() < 60.0) {
+              // Head away from the urchin's projected x.
+              target = u.xFactor > tide.buoyXFactor
+                  ? PhysicsConstants.tideBuoyMinXFactor
+                  : 1.0 - PhysicsConstants.tideBuoyMinXFactor;
+            }
+          }
+          tide.setBuoyTargetXFactor(target);
+
+          controller.tick(
+            Duration.zero,
+            0.016.clamp(0.001, PhysicsConstants.maxDeltaTime),
+          );
+        }
+        final double scoreBeforeSwap = controller.currentScore;
+        expect(scoreBeforeSwap, greaterThan(1000.0));
+
+        // Mutation executed at 15s: hemispheres trade mechanics.
+        expect(controller.survivalTime, greaterThanOrEqualTo(15.0));
+        expect(
+          controller.hemisphereState.leftMechanic,
+          equals(HemisphereMechanic.tideHarvester),
+        );
+        expect(
+          controller.hemisphereState.rightMechanic,
+          equals(HemisphereMechanic.tideSub),
+        );
+
+        // Continue another 5s in the swapped configuration.
+        for (int i = 0; i < 310; i++) {
+          final TideLockEntity tide = controller.tideLock;
+          double target = 0.5;
+          for (final TideUrchin u in tide.urchins) {
+            if ((u.y - tide.buoyY).abs() < 60.0) {
+              target = u.xFactor > tide.buoyXFactor
+                  ? PhysicsConstants.tideBuoyMinXFactor
+                  : 1.0 - PhysicsConstants.tideBuoyMinXFactor;
+            }
+          }
+          tide.setBuoyTargetXFactor(target);
+          controller.tick(
+            Duration.zero,
+            0.016.clamp(0.001, PhysicsConstants.maxDeltaTime),
+          );
+        }
+        expect(controller.currentScore, greaterThan(scoreBeforeSwap));
+        expect(controller.tideLock.level, inInclusiveRange(0.0, 1.0));
+        expect(controller.state, equals(GamePlayState.playing));
+      },
+    );
+
+    test(
+      'Tide Lock 1-Hand: sub death leaves an autonomous tide for the buoy',
+      () {
+        final controller = GameController();
+        controller.updateDimensions(400.0, 800.0);
+        controller.setGamePairMode(GamePairMode.tideLock);
+        controller.setPlayMode(PlayHandMode.oneHand);
+        controller.startRun();
+        controller.tick(Duration.zero, 4.0); // Pass grace period
+
+        // Sink the sub with a forced arch.
+        controller.tideLock.arches.add(
+          TideArch(
+            xFactor: 0.5,
+            bottomY: controller.tideLock.subY + 100.0,
+            widthFactor: 0.3,
+            direction: -1.0,
+          ),
+        );
+        controller.tick(Duration.zero, 0.016);
+
+        expect(controller.orbAlive, isFalse);
+        expect(controller.dartAlive, isTrue);
+        expect(controller.state, equals(GamePlayState.playing));
+
+        // The buoy keeps playing under an autonomous tide for 10 more seconds.
+        for (int i = 0; i < 625; i++) {
+          controller.tick(Duration.zero, 0.016);
+          if (controller.state != GamePlayState.playing) break;
+        }
+
+        // Either the buoy is still alive under the auto tide, or it was
+        // legitimately stung — but the engine must never stall.
+        expect(controller.tideLock.level, inInclusiveRange(0.0, 1.0));
+        expect(
+          controller.state,
+          isIn([
+            GamePlayState.playing,
+            GamePlayState.deathSlowmo,
+            GamePlayState.deathReceipt,
+          ]),
+        );
       },
     );
 

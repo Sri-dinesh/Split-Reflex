@@ -254,7 +254,7 @@ void main() {
       controller.setControlMode(ControlMode.gyroTilt);
       controller.setPlayMode(PlayHandMode.oneHand);
       controller.setSessionMode(GameSessionMode.duoCoop);
-      controller.setGamePairMode(GamePairMode.pulseReflex);
+      controller.setGamePairMode(GamePairMode.tideLock);
 
       controller.resetToFactoryDefaults();
 

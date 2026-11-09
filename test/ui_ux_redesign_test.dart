@@ -148,7 +148,7 @@ void main() {
         );
         expect(find.text('Classic'), findsOneWidget);
         expect(find.text('Breach Pong'), findsOneWidget);
-        expect(find.text('Pulse Reflex'), findsOneWidget);
+        expect(find.text('Tide Lock'), findsOneWidget);
         expect(find.text('Start Run'), findsOneWidget);
 
         // Tap Settings icon
