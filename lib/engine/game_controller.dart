@@ -17,8 +17,7 @@ import 'entities/dimension_breach_entity.dart';
 import 'entities/obstacle_entity.dart';
 import 'entities/orb_entity.dart';
 import 'entities/particle_pool.dart';
-import 'entities/shield_ping_entity.dart';
-import 'entities/quantum_warp_entity.dart';
+import 'entities/tide_lock_entity.dart';
 import 'hemisphere_state.dart';
 import 'input_router.dart';
 
@@ -60,7 +59,7 @@ class DeathAutopsy {
 enum GamePairMode {
   classic, // Left: Orb (Thrust) | Right: Dart (Steer)
   dimensionBreach, // Zero-G Membrane Ping-Pong (Left: Anti-G | Right: Heavy-G)
-  pulseReflex, // Left: Shield (Ping Deflect) | Right: Quantum (Warp Rails)
+  tideLock, // One shared tide: Left: Valve+Sub | Right: Harvester Buoy
 }
 
 enum PlayHandMode {
@@ -183,11 +182,8 @@ class GameController extends ChangeNotifier {
   // Pair 2: Dimension Breach (Zero-G Membrane Ping-Pong)
   final DimensionBreachEntity dimensionBreach = DimensionBreachEntity();
 
-  // Pair 3: Pulse Reflex
-  final ShieldPingEntity shieldPing = ShieldPingEntity();
-  final QuantumWarpEntity quantumWarp = QuantumWarpEntity();
-  final List<PlasmaBolt> plasmaBolts = [];
-  final List<QuantumBlockade> quantumBlockades = [];
+  // Pair 3: Tide Lock (ONE shared water level between both hemispheres)
+  final TideLockEntity tideLock = TideLockEntity();
 
   final ParticlePool particlePool = ParticlePool();
   final SeededRng rng = SeededRng();
@@ -199,16 +195,21 @@ class GameController extends ChangeNotifier {
   double _postSwapGraceTimer = 0.0;
   double _rollingSafeCorridorX = 0.0;
   double _attractAnimTime = 0.0;
+  double _tideBubbleTimer = 0.0;
+
+  /// Free-running cosmetic clock for attract/countdown water animation.
+  double get waveAnimTime =>
+      state == GamePlayState.playing ? survivalTime : _attractAnimTime;
 
   bool isMechanicAlive(HemisphereMechanic mechanic) {
     switch (mechanic) {
       case HemisphereMechanic.orb:
       case HemisphereMechanic.breachAlpha:
-      case HemisphereMechanic.shieldPing:
+      case HemisphereMechanic.tideSub:
         return orbAlive;
       case HemisphereMechanic.dart:
       case HemisphereMechanic.breachBeta:
-      case HemisphereMechanic.quantumWarp:
+      case HemisphereMechanic.tideHarvester:
         return dartAlive;
     }
   }
@@ -380,9 +381,9 @@ class GameController extends ChangeNotifier {
         leftMech = HemisphereMechanic.breachAlpha;
         rightMech = HemisphereMechanic.breachBeta;
         break;
-      case GamePairMode.pulseReflex:
-        leftMech = HemisphereMechanic.shieldPing;
-        rightMech = HemisphereMechanic.quantumWarp;
+      case GamePairMode.tideLock:
+        leftMech = HemisphereMechanic.tideSub;
+        rightMech = HemisphereMechanic.tideHarvester;
         break;
     }
 
@@ -402,9 +403,9 @@ class GameController extends ChangeNotifier {
     // Clear obstacles
     laserGates.clear();
     monoliths.clear();
-    plasmaBolts.clear();
-    quantumBlockades.clear();
     dimensionBreach.mines.clear();
+    tideLock.clearSubHazards();
+    tideLock.clearBuoyHazards();
 
     final double leftLaneLeft = hemisphereState.getLaneLeft(
       leftMech,
@@ -442,12 +443,8 @@ class GameController extends ChangeNotifier {
       screenHeight: screenHeight,
     );
 
-    // Init Pair 3
-    shieldPing.reset(baselineY: screenHeight * 0.72);
-    quantumWarp.reset(
-      railY: screenHeight * 0.72,
-      trackLeftX: rightLaneLeft + (rightLaneRight - rightLaneLeft) * 0.30,
-    );
+    // Init Pair 3: Tide Lock — one shared water level across both hemispheres
+    tideLock.reset(screenHeight: screenHeight, initialLevel: 0.4);
   }
 
   void returnToMenu() {
@@ -746,24 +743,95 @@ class GameController extends ChangeNotifier {
       );
 
       _processBreachEvents(breachEvents);
-    } else if (gamePairMode == GamePairMode.pulseReflex) {
-      // Pair 3: Shield Ping & Quantum Warp
-      if (orbAlive) {
-        shieldPing.update(dt);
+    } else if (gamePairMode == GamePairMode.tideLock) {
+      // Pair 3: Tide Lock — ONE shared water level drives both hemispheres.
+      final bool subIsLeft =
+          hemisphereState.leftMechanic == HemisphereMechanic.tideSub;
+      final bool subAlive = isMechanicAlive(HemisphereMechanic.tideSub);
+      final bool buoyAlive = isMechanicAlive(HemisphereMechanic.tideHarvester);
+
+      // Valve input: whichever thumb currently hosts the sub mechanic.
+      // In 1-Hand survival with the sub gone, the tide breathes on its own.
+      bool valveHeld;
+      if (!subAlive && playMode == PlayHandMode.oneHand) {
+        valveHeld = false; // entity switches to autonomous tide
+      } else if (!buoyAlive && playMode == PlayHandMode.oneHand) {
+        valveHeld = inputRouter.leftThumbHeld || inputRouter.rightThumbHeld;
+      } else {
+        valveHeld = subIsLeft
+            ? inputRouter.leftThumbHeld
+            : inputRouter.rightThumbHeld;
       }
 
-      final double qLeft = hemisphereState.getLaneLeft(
-        HemisphereMechanic.quantumWarp,
-        screenWidth,
+      // Gyro tilt steers the buoy like the Rail Dart.
+      if (controlMode == ControlMode.gyroTilt && buoyAlive) {
+        final double alpha = 1.0 - math.exp(-26.0 * dt);
+        _filteredGyroTiltX =
+            ui.lerpDouble(_filteredGyroTiltX, _rawGyroTiltX, alpha) ??
+            _rawGyroTiltX;
+        const double tiltRange = 3.0;
+        final double normalized = (_filteredGyroTiltX / tiltRange).clamp(
+          -1.0,
+          1.0,
+        );
+        final double curved =
+            normalized.sign * math.pow(normalized.abs(), 1.1);
+        final double buoyLaneLeft = hemisphereState.getLaneLeft(
+          HemisphereMechanic.tideHarvester,
+          screenWidth,
+        );
+        final double buoyLaneRight = hemisphereState.getLaneRight(
+          HemisphereMechanic.tideHarvester,
+          screenWidth,
+        );
+        final double laneCenter = (buoyLaneLeft + buoyLaneRight) / 2.0;
+        final double maxTravel =
+            (buoyLaneRight - buoyLaneLeft) / 2.0 *
+            (1.0 - 2.0 * PhysicsConstants.tideBuoyMinXFactor);
+        final double targetX = laneCenter + curved * maxTravel;
+        tideLock.setBuoyTargetXFactor(
+          (targetX - buoyLaneLeft) / (buoyLaneRight - buoyLaneLeft),
+        );
+      }
+
+      final List<TideEvent> tideEvents = _updateTideLock(
+        dt: dt,
+        valveHeld: valveHeld,
+        valveAuto: !subAlive && playMode == PlayHandMode.oneHand,
+        subAlive: subAlive,
+        buoyAlive: buoyAlive,
+        spawnEnabled: true,
+        allowDeaths: _postSwapGraceTimer <= 0.0,
+        attractPilot: false,
+        survivalTime: survivalTime,
+        speedScale: speedScale,
       );
-      final double qRight = hemisphereState.getLaneRight(
-        HemisphereMechanic.quantumWarp,
-        screenWidth,
-      );
-      if (dartAlive) {
-        final double trackLeftX = qLeft + (qRight - qLeft) * 0.30;
-        final double trackRightX = qLeft + (qRight - qLeft) * 0.70;
-        quantumWarp.update(dt, trackLeftX, trackRightX);
+      _processTideEvents(tideEvents);
+
+      // Valve feedback: bubbling exhaust surface while the tide is filling.
+      if (subAlive && tideLock.valveOpen) {
+        _tideBubbleTimer += dt;
+        if (_tideBubbleTimer >= 0.18) {
+          _tideBubbleTimer = 0.0;
+          final double sLeft = hemisphereState.getLaneLeft(
+            HemisphereMechanic.tideSub,
+            screenWidth,
+          );
+          final double sRight = hemisphereState.getLaneRight(
+            HemisphereMechanic.tideSub,
+            screenWidth,
+          );
+          final double subCenterX = sLeft + (sRight - sLeft) * 0.5;
+          particlePool.spawnBurst(
+            origin: Offset(subCenterX, tideLock.subY),
+            count: 2,
+            color: (subIsLeft
+                    ? hemisphereState.leftFg
+                    : hemisphereState.rightFg)
+                .withOpacity(0.5),
+            speed: 55.0,
+          );
+        }
       }
     }
 
@@ -777,6 +845,123 @@ class GameController extends ChangeNotifier {
     _checkCollisions();
 
     notifyListeners();
+  }
+
+  /// Computes lane geometry and advances the Tide Lock pair one frame.
+  List<TideEvent> _updateTideLock({
+    required double dt,
+    required bool valveHeld,
+    required bool valveAuto,
+    required bool subAlive,
+    required bool buoyAlive,
+    required bool spawnEnabled,
+    required bool allowDeaths,
+    required bool attractPilot,
+    required double survivalTime,
+    required double speedScale,
+    double valveAutoTime = 0.0,
+  }) {
+    final bool subIsLeft =
+        hemisphereState.leftMechanic == HemisphereMechanic.tideSub;
+    final double subLaneLeft = hemisphereState.getLaneLeft(
+      HemisphereMechanic.tideSub,
+      screenWidth,
+    );
+    final double subLaneRight = hemisphereState.getLaneRight(
+      HemisphereMechanic.tideSub,
+      screenWidth,
+    );
+    final double buoyLaneLeft = hemisphereState.getLaneLeft(
+      HemisphereMechanic.tideHarvester,
+      screenWidth,
+    );
+    final double buoyLaneRight = hemisphereState.getLaneRight(
+      HemisphereMechanic.tideHarvester,
+      screenWidth,
+    );
+
+    return tideLock.update(
+      dt: dt,
+      screenHeight: screenHeight,
+      subLaneLeft: subLaneLeft,
+      subLaneWidth: math.max(1.0, subLaneRight - subLaneLeft),
+      buoyLaneLeft: buoyLaneLeft,
+      buoyLaneWidth: math.max(1.0, buoyLaneRight - buoyLaneLeft),
+      subIsLeft: subIsLeft,
+      subActive: subAlive,
+      buoyActive: buoyAlive,
+      valveHeld: valveHeld,
+      valveAuto: valveAuto,
+      valveAutoTime: valveAutoTime,
+      inverted: hemisphereState.isPolarityInverted,
+      spawnEnabled: spawnEnabled,
+      allowDeaths: allowDeaths,
+      attractPilot: attractPilot,
+      survivalTime: survivalTime,
+      speedScale: speedScale,
+    );
+  }
+
+  void _processTideEvents(List<TideEvent> events) {
+    if (events.isEmpty) return;
+
+    final bool subIsLeft =
+        hemisphereState.leftMechanic == HemisphereMechanic.tideSub;
+    for (final TideEvent event in events) {
+      switch (event.type) {
+        case TideEventType.archCleared:
+          currentScore +=
+              PhysicsConstants.tideArchClearedPoints *
+              batteryState.scoreMultiplier;
+          ProceduralAudioSynth.instance.playNearMiss();
+          HapticChoreographer.instance.triggerNearMiss();
+          particlePool.spawnBurst(
+            origin: event.position,
+            count: 10,
+            color: SplitPalette.nearMissCyan,
+            speed: 150.0,
+          );
+          _addCameraShake(1.5);
+          break;
+
+        case TideEventType.subNearMiss:
+          _handleNearMiss(event.position);
+          break;
+
+        case TideEventType.bulbFed:
+          currentScore +=
+              PhysicsConstants.tideBulbFedPoints *
+              batteryState.scoreMultiplier;
+          ProceduralAudioSynth.instance.playWarp();
+          HapticChoreographer.instance.triggerSwapTick();
+          particlePool.spawnBurst(
+            origin: event.position,
+            count: 14,
+            color: batteryState.isOverdrive
+                ? SplitPalette.goldBright
+                : SplitPalette.nearMissCyan,
+            speed: 170.0,
+          );
+          _addCameraShake(2.0);
+          break;
+
+        case TideEventType.subCrushed:
+          _handleHemisphereFailure(
+            failedHemisphere: subIsLeft ? 'LEFT' : 'RIGHT',
+            failedMechanic: 'TIDE SUB',
+            impactPoint: event.position,
+          );
+          break;
+
+        case TideEventType.buoyStung:
+          _handleHemisphereFailure(
+            failedHemisphere: subIsLeft ? 'RIGHT' : 'LEFT',
+            failedMechanic: 'TIDE HARVESTER',
+            impactPoint: event.position,
+          );
+          break;
+      }
+    }
   }
 
   void _tickAttract(double dt) {
@@ -848,22 +1033,39 @@ class GameController extends ChangeNotifier {
         isLeftAlpha: true,
         isPostSwapGrace: false,
       );
-    } else if (gamePairMode == GamePairMode.pulseReflex) {
-      shieldPing.y = screenHeight * 0.75;
-      shieldPing.update(dt);
-
-      final double qLeft = hemisphereState.getLaneLeft(
-        HemisphereMechanic.quantumWarp,
-        screenWidth,
+    } else if (gamePairMode == GamePairMode.tideLock) {
+      // Attract: the machine breathes on its own — no thumb owns the valve.
+      _attractAnimTime += dt;
+      final List<TideEvent> tideEvents = _updateTideLock(
+        dt: dt,
+        valveHeld: false,
+        valveAuto: true,
+        valveAutoTime: _attractAnimTime,
+        subAlive: true,
+        buoyAlive: true,
+        spawnEnabled: true,
+        allowDeaths: false,
+        attractPilot: true,
+        survivalTime: _attractAnimTime,
+        speedScale: 0.9,
       );
-      final double qRight = hemisphereState.getLaneRight(
-        HemisphereMechanic.quantumWarp,
-        screenWidth,
-      );
-      final double trackLeftX = qLeft + (qRight - qLeft) * 0.30;
-      final double trackRightX = qLeft + (qRight - qLeft) * 0.70;
-      quantumWarp.y = screenHeight * 0.75;
-      quantumWarp.update(dt, trackLeftX, trackRightX);
+      for (final TideEvent event in tideEvents) {
+        if (event.type == TideEventType.archCleared) {
+          particlePool.spawnBurst(
+            origin: event.position,
+            count: 8,
+            color: SplitPalette.nearMissCyan.withOpacity(0.7),
+            speed: 120.0,
+          );
+        } else if (event.type == TideEventType.bulbFed) {
+          particlePool.spawnBurst(
+            origin: event.position,
+            count: 10,
+            color: SplitPalette.goldBright.withOpacity(0.7),
+            speed: 130.0,
+          );
+        }
+      }
     }
 
     particlePool.update(dt);
@@ -928,22 +1130,23 @@ class GameController extends ChangeNotifier {
       dimensionBreach.paddleLeftTargetY = screenHeight * 0.5;
       dimensionBreach.paddleRightY = screenHeight * 0.5;
       dimensionBreach.paddleRightTargetY = screenHeight * 0.5;
-    } else if (gamePairMode == GamePairMode.pulseReflex) {
-      shieldPing.y = screenHeight * 0.75;
-      shieldPing.update(dt);
-
-      final double qLeft = hemisphereState.getLaneLeft(
-        HemisphereMechanic.quantumWarp,
-        screenWidth,
+    } else if (gamePairMode == GamePairMode.tideLock) {
+      // Countdown: the machine holds a calm mid-tide with no hazard spawns.
+      _attractAnimTime += dt;
+      _updateTideLock(
+        dt: dt,
+        valveHeld: false,
+        valveAuto: true,
+        valveAutoTime: _attractAnimTime,
+        subAlive: true,
+        buoyAlive: true,
+        spawnEnabled: false,
+        allowDeaths: false,
+        attractPilot: false,
+        survivalTime: 0.0,
+        speedScale: 1.0,
       );
-      final double qRight = hemisphereState.getLaneRight(
-        HemisphereMechanic.quantumWarp,
-        screenWidth,
-      );
-      final double trackLeftX = qLeft + (qRight - qLeft) * 0.30;
-      final double trackRightX = qLeft + (qRight - qLeft) * 0.70;
-      quantumWarp.y = screenHeight * 0.75;
-      quantumWarp.update(dt, trackLeftX, trackRightX);
+      tideLock.setBuoyTargetXFactor(0.5);
     }
 
     particlePool.update(dt);
@@ -982,9 +1185,9 @@ class GameController extends ChangeNotifier {
     // Clear active obstacles on swap to prevent unfair instant collisions across all modes
     laserGates.clear();
     monoliths.clear();
-    plasmaBolts.clear();
-    quantumBlockades.clear();
     dimensionBreach.mines.clear();
+    tideLock.clearHazardsOnSwap();
+    tideLock.setBuoyTargetXFactor(0.5);
 
     // Cross-translate Pair 1 (Classic)
     final double newOrbLeft = hemisphereState.getLaneLeft(
@@ -1009,21 +1212,8 @@ class GameController extends ChangeNotifier {
     dart.targetX = dart.x;
     _rollingSafeCorridorX = dart.x;
 
-    // Cross-translate Pair 3 (Pulse Reflex)
-    final double newQLeft = hemisphereState.getLaneLeft(
-      HemisphereMechanic.quantumWarp,
-      screenWidth,
-    );
-    final double newQRight = hemisphereState.getLaneRight(
-      HemisphereMechanic.quantumWarp,
-      screenWidth,
-    );
-    final double trackLeftX = newQLeft + (newQRight - newQLeft) * 0.30;
-    final double trackRightX = newQLeft + (newQRight - newQLeft) * 0.70;
-    quantumWarp.currentX = quantumWarp.track == QuantumTrack.left
-        ? trackLeftX
-        : trackRightX;
-    quantumWarp.targetX = quantumWarp.currentX;
+    // Tide Lock: hazards were cleared above; the shared water level, barnacle
+    // layout and buoy steering are lane-relative so they translate for free.
 
     ProceduralAudioSynth.instance.playSwapExecute();
     HapticChoreographer.instance.triggerSwapExecute();
@@ -1164,48 +1354,8 @@ class GameController extends ChangeNotifier {
       }
     } else if (gamePairMode == GamePairMode.dimensionBreach) {
       // Dimension Breach manages its own floating hazard mines and ball physics
-    } else if (gamePairMode == GamePairMode.pulseReflex) {
-      // Pair 3: Plasma Bolts & Quantum Blockades
-      if (orbAlive) {
-        _laserSpawnTimer += dt;
-        if (_laserSpawnTimer >= 1.3) {
-          _laserSpawnTimer = 0.0;
-          plasmaBolts.add(PlasmaBolt(y: -30.0, speed: 380.0 * speedScale));
-        }
-
-        for (int i = plasmaBolts.length - 1; i >= 0; i--) {
-          final b = plasmaBolts[i];
-          b.y += b.speed * dt;
-          if (b.y > screenHeight + 40) {
-            plasmaBolts.removeAt(i);
-          }
-        }
-      } else {
-        plasmaBolts.clear();
-      }
-
-      if (dartAlive) {
-        _monolithSpawnTimer += dt;
-        if (_monolithSpawnTimer >= 1.2) {
-          _monolithSpawnTimer = 0.0;
-          final QuantumTrack qTrack = rng.nextDouble() > 0.5
-              ? QuantumTrack.left
-              : QuantumTrack.right;
-          quantumBlockades.add(
-            QuantumBlockade(y: -40.0, track: qTrack, speed: 310.0 * speedScale),
-          );
-        }
-
-        for (int i = quantumBlockades.length - 1; i >= 0; i--) {
-          final b = quantumBlockades[i];
-          b.y += b.speed * dt;
-          if (b.y > screenHeight + 40) {
-            quantumBlockades.removeAt(i);
-          }
-        }
-      } else {
-        quantumBlockades.clear();
-      }
+    } else if (gamePairMode == GamePairMode.tideLock) {
+      // Tide Lock self-manages arch / urchin spawn cycles inside TideLockEntity.
     }
   }
 
@@ -1278,90 +1428,9 @@ class GameController extends ChangeNotifier {
       }
     } else if (gamePairMode == GamePairMode.dimensionBreach) {
       // Dimension Breach collisions and boundary checks are handled dynamically in _processBreachEvents
-    } else if (gamePairMode == GamePairMode.pulseReflex) {
-      // Pair 3 Collisions
-      if (orbAlive) {
-        final double shieldLeft = hemisphereState.getLaneLeft(
-          HemisphereMechanic.shieldPing,
-          screenWidth,
-        );
-        final double shieldRight = hemisphereState.getLaneRight(
-          HemisphereMechanic.shieldPing,
-          screenWidth,
-        );
-        final double shieldMidX = (shieldLeft + shieldRight) / 2.0;
-
-        for (final bolt in plasmaBolts) {
-          if (bolt.deflected) continue;
-          if (bolt.y >= shieldPing.y - 20.0 && bolt.y <= shieldPing.y + 20.0) {
-            if (shieldPing.isDeflecting) {
-              bolt.deflected = true;
-              currentScore += 75.0 * batteryState.scoreMultiplier;
-              particlePool.spawnBurst(
-                origin: Offset(shieldMidX, shieldPing.y),
-                count: 16,
-                color: SplitPalette.nearMissCyan,
-                speed: 220.0,
-              );
-            } else if (bolt.y > shieldPing.y + 6.0) {
-              _handleHemisphereFailure(
-                failedHemisphere:
-                    hemisphereState.leftMechanic ==
-                        HemisphereMechanic.shieldPing
-                    ? 'LEFT'
-                    : 'RIGHT',
-                failedMechanic: 'SHIELD',
-                impactPoint: Offset(shieldMidX, shieldPing.y),
-              );
-              return;
-            }
-          } else if (bolt.y > shieldPing.y + 20.0 && !bolt.deflected) {
-            // Bolt breached shield barrier!
-            _handleHemisphereFailure(
-              failedHemisphere:
-                  hemisphereState.leftMechanic == HemisphereMechanic.shieldPing
-                  ? 'LEFT'
-                  : 'RIGHT',
-              failedMechanic: 'SHIELD',
-              impactPoint: Offset(shieldMidX, shieldPing.y),
-            );
-            return;
-          }
-        }
-      }
-
-      if (dartAlive) {
-        final double qLeft = hemisphereState.getLaneLeft(
-          HemisphereMechanic.quantumWarp,
-          screenWidth,
-        );
-        final double qRight = hemisphereState.getLaneRight(
-          HemisphereMechanic.quantumWarp,
-          screenWidth,
-        );
-        final double trackLeftX = qLeft + (qRight - qLeft) * 0.30;
-        final double trackRightX = qLeft + (qRight - qLeft) * 0.70;
-
-        for (final b in quantumBlockades) {
-          final double bx = b.track == QuantumTrack.left
-              ? trackLeftX
-              : trackRightX;
-          final bool onSameTrack = (quantumWarp.currentX - bx).abs() < 24.0;
-          final bool verticalOverlap =
-              (b.y - quantumWarp.y).abs() < (b.height * 0.5 + 16.0);
-          if (onSameTrack && verticalOverlap) {
-            _handleHemisphereFailure(
-              failedHemisphere:
-                  hemisphereState.leftMechanic == HemisphereMechanic.quantumWarp
-                  ? 'LEFT'
-                  : 'RIGHT',
-              failedMechanic: 'QUANTUM',
-              impactPoint: Offset(quantumWarp.currentX, quantumWarp.y),
-            );
-            return;
-          }
-        }
-      }
+    } else if (gamePairMode == GamePairMode.tideLock) {
+      // Tide Lock collisions emit TideEvents from TideLockEntity.update and
+      // are terminalised in _processTideEvents.
     }
   }
 
@@ -1380,16 +1449,18 @@ class GameController extends ChangeNotifier {
       );
     } else {
       // 1 Hand Mode: Eliminate failed side, continue with surviving side
-      if (failedMechanic == 'ORB' ||
+      final bool failureIsLeftOwner =
+          failedMechanic == 'ORB' ||
           failedMechanic == 'ZERO-G DEFLECTOR' ||
-          failedMechanic == 'SHIELD') {
+          failedMechanic == 'TIDE SUB';
+      if (failureIsLeftOwner) {
         orbAlive = false;
         laserGates.clear();
-        plasmaBolts.clear();
+        tideLock.clearSubHazards();
       } else {
         dartAlive = false;
         monoliths.clear();
-        quantumBlockades.clear();
+        tideLock.clearBuoyHazards();
       }
 
       // Explosion effects on the destroyed side
@@ -1503,8 +1574,8 @@ class GameController extends ChangeNotifier {
             return HemisphereMechanic.dart;
           case GamePairMode.dimensionBreach:
             return HemisphereMechanic.breachBeta;
-          case GamePairMode.pulseReflex:
-            return HemisphereMechanic.quantumWarp;
+          case GamePairMode.tideLock:
+            return HemisphereMechanic.tideHarvester;
         }
       } else if (orbAlive && !dartAlive) {
         switch (gamePairMode) {
@@ -1512,8 +1583,8 @@ class GameController extends ChangeNotifier {
             return HemisphereMechanic.orb;
           case GamePairMode.dimensionBreach:
             return HemisphereMechanic.breachAlpha;
-          case GamePairMode.pulseReflex:
-            return HemisphereMechanic.shieldPing;
+          case GamePairMode.tideLock:
+            return HemisphereMechanic.tideSub;
         }
       }
     }
@@ -1675,24 +1746,21 @@ class GameController extends ChangeNotifier {
       case HemisphereMechanic.breachBeta:
         dimensionBreach.handleRightInput(localPosition.dy, screenHeight);
         break;
-      case HemisphereMechanic.shieldPing:
-        shieldPing.triggerPing();
-        ProceduralAudioSynth.instance.playShieldPing();
+      case HemisphereMechanic.tideSub:
+        // The valve is hold-driven via inputRouter thumb state; a fresh press
+        // just gives tactile feedback.
+        ProceduralAudioSynth.instance.playTap();
         HapticChoreographer.instance.triggerTap();
         break;
       case HemisphereMechanic.dart:
         dart.handleTap(targetTapX, laneLeft: laneLeft, laneRight: laneRight);
         break;
-      case HemisphereMechanic.quantumWarp:
-        quantumWarp.warp();
-        ProceduralAudioSynth.instance.playWarp();
-        HapticChoreographer.instance.triggerTap();
-        particlePool.spawnBurst(
-          origin: Offset(quantumWarp.currentX, quantumWarp.y),
-          count: 10,
-          color: SplitPalette.nearMissCyan,
-          speed: 140.0,
+      case HemisphereMechanic.tideHarvester:
+        tideLock.setBuoyTargetXFactor(
+          ((targetTapX - laneLeft) / (laneRight - laneLeft)).clamp(0.0, 1.0),
         );
+        ProceduralAudioSynth.instance.playTap();
+        HapticChoreographer.instance.triggerTap();
         break;
     }
   }
@@ -1745,6 +1813,15 @@ class GameController extends ChangeNotifier {
       case HemisphereMechanic.breachBeta:
         dimensionBreach.handleRightInput(localPosition.dy, screenHeight);
         break;
+      case HemisphereMechanic.tideHarvester:
+        tideLock.setBuoyTargetXFactor(
+          ((localPosition.dx - laneLeft) / (laneRight - laneLeft)).clamp(
+            0.0,
+            1.0,
+          ),
+        );
+        break;
+      case HemisphereMechanic.tideSub:
       default:
         break;
     }

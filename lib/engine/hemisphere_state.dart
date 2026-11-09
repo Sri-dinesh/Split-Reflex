@@ -12,8 +12,8 @@ enum HemisphereMechanic {
   dart, // Pair 1: Rail Weaver
   breachAlpha, // Pair 2: Zero-G Deflector Alpha (Ping Pong)
   breachBeta, // Pair 2: Heavy-G Deflector Beta (Ping Pong)
-  shieldPing, // Pair 3: Rhythm reflex deflector
-  quantumWarp, // Pair 3: Binary dual-track hopper
+  tideSub, // Pair 3: Tide valve + buoyant submarine
+  tideHarvester, // Pair 3: Surface-riding barnacle harvester
 }
 
 class HemisphereState {

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../entities/particle_pool.dart';
+import '../entities/tide_lock_entity.dart';
 import '../game_controller.dart';
 import '../hemisphere_state.dart';
 import 'dart_hemisphere_painter.dart';
 import 'dimension_breach_painter.dart';
 import 'divider_painter.dart';
 import 'orb_hemisphere_painter.dart';
-import 'shield_hemisphere_painter.dart';
-import 'quantum_hemisphere_painter.dart';
+import 'tide_hemisphere_painter.dart';
 import 'post_process_painter.dart';
 
 class MasterGamePainter extends CustomPainter {
@@ -196,31 +196,53 @@ class MasterGamePainter extends CustomPainter {
             isOverdrive: controller.batteryState.isOverdrive,
           );
           break;
-        case HemisphereMechanic.shieldPing:
-          ShieldHemispherePainter.paint(
+        case HemisphereMechanic.tideSub:
+        case HemisphereMechanic.tideHarvester:
+          TideHemispherePainter.paintWater(
             canvas: canvas,
             size: size,
-            shield: controller.shieldPing,
-            bolts: controller.plasmaBolts,
             laneLeft: laneLeft,
             laneRight: laneRight,
+            surfaceY:
+                TideLockEntity.surfaceYFor(controller.tideLock.level, size.height),
+            animTime: controller.waveAnimTime,
             fgColor: fgColor,
-            bgColor: bgColor,
-            isOverdrive: controller.batteryState.isOverdrive,
           );
-          break;
-        case HemisphereMechanic.quantumWarp:
-          QuantumHemispherePainter.paint(
-            canvas: canvas,
-            size: size,
-            warpEntity: controller.quantumWarp,
-            blockades: controller.quantumBlockades,
-            laneLeft: laneLeft,
-            laneRight: laneRight,
-            fgColor: fgColor,
-            bgColor: bgColor,
-            isOverdrive: controller.batteryState.isOverdrive,
-          );
+          if (mechanic == HemisphereMechanic.tideSub) {
+            TideHemispherePainter.paintValveSub(
+              canvas: canvas,
+              size: size,
+              arches: controller.tideLock.arches,
+              laneLeft: laneLeft,
+              laneRight: laneRight,
+              surfaceY:
+                  TideLockEntity.surfaceYFor(controller.tideLock.level, size.height),
+              subX: laneLeft + (laneRight - laneLeft) * 0.5,
+              subY: controller.tideLock.subY,
+              valveOpen: controller.tideLock.valveOpen,
+              animTime: controller.waveAnimTime,
+              fgColor: fgColor,
+              bgColor: bgColor,
+              isOverdrive: controller.batteryState.isOverdrive,
+            );
+          } else {
+            TideHemispherePainter.paintHarvester(
+              canvas: canvas,
+              size: size,
+              barnacles: controller.tideLock.barnacles,
+              urchins: controller.tideLock.urchins,
+              laneLeft: laneLeft,
+              laneRight: laneRight,
+              surfaceY:
+                  TideLockEntity.surfaceYFor(controller.tideLock.level, size.height),
+              buoyX: laneLeft +
+                  controller.tideLock.buoyXFactor * (laneRight - laneLeft),
+              buoyY: controller.tideLock.buoyY,
+              animTime: controller.waveAnimTime,
+              fgColor: fgColor,
+              isOverdrive: controller.batteryState.isOverdrive,
+            );
+          }
           break;
       }
     }
