@@ -800,8 +800,10 @@ class GameController extends ChangeNotifier {
         valveAuto: !subAlive && playMode == PlayHandMode.oneHand,
         subAlive: subAlive,
         buoyAlive: buoyAlive,
-        spawnEnabled: true,
-        allowDeaths: _postSwapGraceTimer <= 0.0,
+        // Shared engine invariant: 3.5s startup runway with zero hazards,
+        // same as every other game pair.
+        spawnEnabled: survivalTime >= 3.5,
+        allowDeaths: _postSwapGraceTimer <= 0.0 && survivalTime >= 3.5,
         attractPilot: false,
         survivalTime: survivalTime,
         speedScale: speedScale,
