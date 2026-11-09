@@ -22,9 +22,9 @@ Every 15 seconds, the engine mutates: the split boundary drifts, hemisphere mech
    - **Left (Phase Core)**: Instant polarity-inverting core (*Cyan* ↔ *Crimson*). Must match incoming laser wall polarities to absorb energy instead of crashing.
    - **Right (Slalom Drift)**: Undulating sine-wave chasm glider navigating through a mathematically winding canyon with startup runway stabilization.
 
-3. **PULSE REFLEX**
-   - **Left (Shield Ping)**: Rhythm-based kinetic deflector triggering calibrated shield pulses to bounce descending plasma bolts.
-   - **Right (Quantum Warp)**: Dual-rail binary hyper-hopper executing instantaneous teleportation jumps to dodge quantum blockades.
+3. **TIDE LOCK**
+   - **Left (Tide Valve + Submarine)**: One shared water level fills while the thumb holds and drains on release. The buoyant pressure hull rides just under the crest and must dive under descending hanging arches — starving the valve.
+   - **Right (Harvester Buoy)**: Steered across the same surface; barnacle bulbs only feed while the tide is high enough to reach them, and urchin patrols roam the water column below. Two opposite tenants, one trigger.
 
 ---
 

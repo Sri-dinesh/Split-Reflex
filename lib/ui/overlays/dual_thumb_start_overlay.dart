@@ -27,8 +27,8 @@ class DualThumbStartOverlay extends StatelessWidget {
         return 'Gravity Orb';
       case GamePairMode.dimensionBreach:
         return 'Zero-G Deflector';
-      case GamePairMode.pulseReflex:
-        return 'Shield Ping';
+      case GamePairMode.tideLock:
+        return 'Tide Valve + Sub';
     }
   }
 
@@ -38,8 +38,8 @@ class DualThumbStartOverlay extends StatelessWidget {
         return 'Hold to thrust upward';
       case GamePairMode.dimensionBreach:
         return 'Drag up/down to deflect';
-      case GamePairMode.pulseReflex:
-        return 'Tap on impact to deflect';
+      case GamePairMode.tideLock:
+        return 'Hold = tide rises · release = drains';
     }
   }
 
@@ -49,8 +49,8 @@ class DualThumbStartOverlay extends StatelessWidget {
         return 'Rail Dart';
       case GamePairMode.dimensionBreach:
         return 'Heavy-G Deflector';
-      case GamePairMode.pulseReflex:
-        return 'Quantum Warp';
+      case GamePairMode.tideLock:
+        return 'Harvester Buoy';
     }
   }
 
@@ -60,8 +60,8 @@ class DualThumbStartOverlay extends StatelessWidget {
         return isGyro ? 'Tilt phone to steer' : 'Drag horizontally to weave';
       case GamePairMode.dimensionBreach:
         return 'Drag up/down to slingshot';
-      case GamePairMode.pulseReflex:
-        return 'Tap right to hop rails';
+      case GamePairMode.tideLock:
+        return isGyro ? 'Tilt phone to steer' : 'Drag to steer the buoy';
     }
   }
 
@@ -382,9 +382,9 @@ class DualThumbStartOverlay extends StatelessWidget {
             accentColor: const Color(0xFF00E5FF),
           ),
           _buildModeTab(
-            mode: GamePairMode.pulseReflex,
-            label: 'Pulse Reflex',
-            accentColor: const Color(0xFFFFD700),
+            mode: GamePairMode.tideLock,
+            label: 'Tide Lock',
+            accentColor: const Color(0xFF3FE0C8),
           ),
         ],
       ),
