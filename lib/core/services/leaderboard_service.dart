@@ -128,6 +128,28 @@ class LeaderboardService {
     }
   }
 
+  /// Score of the most recent recorded run, or null when nothing was
+  /// recorded yet. Storage keeps the newest row at the tail.
+  Future<int?> getLastRunScore() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> rawList =
+          prefs.getStringList(_localScoresKey) ?? <String>[];
+      for (int i = rawList.length - 1; i >= 0; i--) {
+        final Object? decoded = jsonDecode(rawList[i]);
+        final int? score = decoded is Map<String, dynamic>
+            ? (decoded['score'] as num?)?.toInt()
+            : null;
+        if (score != null && score >= 0) {
+          return score;
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> clearLocalScores() async {
     try {
       final prefs = await SharedPreferences.getInstance();

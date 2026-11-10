@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_icon_data.dart';
 import '../../core/constants/palette.dart';
 import '../../core/services/haptic_choreographer.dart';
+import '../../core/services/leaderboard_service.dart';
+import '../../core/services/preferences_service.dart';
 import '../../core/services/procedural_audio_synth.dart';
 import '../../engine/game_controller.dart';
 
@@ -116,23 +118,27 @@ class DualThumbStartOverlay extends StatelessWidget {
                           _buildHeroIdentity(isCompact),
                           SizedBox(height: isCompact ? 10.0 : 16.0),
 
-                          // 3. Game Mode Selector
+                          // 3. Pilot Stat Ribbon (callsign / best / last run)
+                          _PilotStatRibbon(controller: controller),
+                          SizedBox(height: isCompact ? 6.0 : 10.0),
+
+                          // 4. Game Mode Selector
                           _buildModeSelector(),
                           SizedBox(height: isCompact ? 8.0 : 14.0),
 
-                          // 4. Mechanics Briefing Card
+                          // 5. Mechanics Briefing Card
                           _buildMechanicsCard(),
                           SizedBox(height: isCompact ? 8.0 : 14.0),
 
-                          // 5. Quick Format Pills (Solo/Duo & 1H/2H)
+                          // 6. Quick Format Pills (Solo/Duo & 1H/2H)
                           _buildFormatPills(),
                           SizedBox(height: isCompact ? 12.0 : 20.0),
 
-                          // 6. Signature Biometric Sensor Pads & Quick Launch
+                          // 7. Signature Biometric Sensor Pads & Quick Launch
                           _buildBiometricLaunchSection(isCompact),
                           SizedBox(height: isCompact ? 6.0 : 10.0),
 
-                          // 7. Health & safety notice (photosensitivity)
+                          // 8. Health & safety notice (photosensitivity)
                           _buildSafetyNotice(isCompact),
                           SizedBox(height: isCompact ? 4.0 : 8.0),
                         ],
@@ -172,64 +178,71 @@ class DualThumbStartOverlay extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Battery & Multiplier Badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-          decoration: BoxDecoration(
-            color: isGod
-                ? SplitPalette.godModeGold.withOpacity(0.12)
-                : (isOverdrive
-                      ? SplitPalette.hazardCrimson.withOpacity(0.12)
-                      : Colors.white.withOpacity(0.06)),
-            borderRadius: BorderRadius.circular(20.0),
-            border: Border.all(
+        // Battery & Multiplier Badge — flexible so it compresses (with
+        // ellipsis) rather than overflowing on narrow 320px screens.
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+            decoration: BoxDecoration(
               color: isGod
-                  ? SplitPalette.godModeGold.withOpacity(0.5)
+                  ? SplitPalette.godModeGold.withOpacity(0.12)
                   : (isOverdrive
-                        ? SplitPalette.hazardCrimson.withOpacity(0.5)
-                        : Colors.white12),
-              width: 1.0,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isGod
-                    ? Icons.flash_on_rounded
-                    : (isOverdrive
-                          ? Icons.bolt_rounded
-                          : Icons.battery_charging_full_rounded),
-                size: 14.0,
+                        ? SplitPalette.hazardCrimson.withOpacity(0.12)
+                        : Colors.white.withOpacity(0.06)),
+              borderRadius: BorderRadius.circular(20.0),
+              border: Border.all(
                 color: isGod
-                    ? SplitPalette.godModeGold
+                    ? SplitPalette.godModeGold.withOpacity(0.5)
                     : (isOverdrive
-                          ? SplitPalette.hazardCrimson
-                          : SplitPalette.nearMissCyan),
+                          ? SplitPalette.hazardCrimson.withOpacity(0.5)
+                          : Colors.white12),
+                width: 1.0,
               ),
-              const SizedBox(width: 6.0),
-              Text(
-                isGod
-                    ? '10x GOD MODE'
-                    : (isOverdrive
-                          ? '${controller.batteryState.scoreMultiplier.toStringAsFixed(1)}x OVERDRIVE'
-                          : '${controller.batteryState.batteryLevel}% BATTERY'),
-                style: TextStyle(
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isGod
+                      ? Icons.flash_on_rounded
+                      : (isOverdrive
+                            ? Icons.bolt_rounded
+                            : Icons.battery_charging_full_rounded),
+                  size: 14.0,
                   color: isGod
                       ? SplitPalette.godModeGold
                       : (isOverdrive
                             ? SplitPalette.hazardCrimson
-                            : Colors.white70),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
+                            : SplitPalette.nearMissCyan),
                 ),
-              ),
-            ],
+                const SizedBox(width: 6.0),
+                Flexible(
+                  child: Text(
+                    isGod
+                        ? '10x GOD MODE'
+                        : (isOverdrive
+                              ? '${controller.batteryState.scoreMultiplier.toStringAsFixed(1)}x OVERDRIVE'
+                              : '${controller.batteryState.batteryLevel}% BATTERY'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isGod
+                          ? SplitPalette.godModeGold
+                          : (isOverdrive
+                                ? SplitPalette.hazardCrimson
+                                : Colors.white70),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
 
-        // Action Buttons: Leaderboard & Settings
+        // Action Buttons: Leaderboard, Quick Mute & Settings
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -242,6 +255,8 @@ class DualThumbStartOverlay extends StatelessWidget {
                 onOpenLeaderboard();
               },
             ),
+            const SizedBox(width: 8.0),
+            const _QuickMuteButton(),
             const SizedBox(width: 8.0),
             _buildCircularIconButton(
               icon: Icons.tune_rounded,
@@ -918,4 +933,206 @@ class _SensorArcPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _SensorArcPainter oldDelegate) =>
       oldDelegate.isHeld != isHeld || oldDelegate.progress != progress;
+}
+
+/// One-tap sound toggle for the menu — the quick silencer. Persists through
+/// [PreferencesService] and shares state with the settings-sheet switch via
+/// [ProceduralAudioSynth.soundEnabledState].
+class _QuickMuteButton extends StatelessWidget {
+  const _QuickMuteButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          final next = !ProceduralAudioSynth.instance.soundEnabled;
+          PreferencesService.instance.setSoundEnabled(next);
+          HapticChoreographer.instance.triggerTap();
+        },
+        borderRadius: BorderRadius.circular(20.0),
+        child: Container(
+          width: 38.0,
+          height: 38.0,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withOpacity(0.06),
+            border: Border.all(color: Colors.white12, width: 1.0),
+          ),
+          child: ValueListenableBuilder<bool>(
+            valueListenable: ProceduralAudioSynth.soundEnabledState,
+            builder: (context, enabled, _) => Icon(
+              enabled
+                  ? Icons.volume_up_rounded
+                  : Icons.volume_off_rounded,
+              color: enabled ? Colors.white : Colors.white38,
+              size: 18.0,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Slim stat strip under the logo: pilot callsign, personal best and the most
+/// recent run. The best value pulls gold whenever the previous run just set a
+/// new record. Reloads on controller events so it stays correct after actions
+/// like "Erase all local data" from the settings sheet.
+class _PilotStatRibbon extends StatefulWidget {
+  final GameController controller;
+
+  const _PilotStatRibbon({required this.controller});
+
+  @override
+  State<_PilotStatRibbon> createState() => _PilotStatRibbonState();
+}
+
+class _PilotStatRibbonState extends State<_PilotStatRibbon> {
+  String _callsign = 'PILOT';
+  int _best = 0;
+  int? _lastRun;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+    widget.controller.addListener(_reload);
+  }
+
+  @override
+  void didUpdateWidget(covariant _PilotStatRibbon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_reload);
+      widget.controller.addListener(_reload);
+      _reload();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_reload);
+    super.dispose();
+  }
+
+  Future<void> _reload() async {
+    final handle = await LeaderboardService.instance.getPlayerHandle();
+    final best = await LeaderboardService.instance.getLocalHighScore();
+    final lastRun = await LeaderboardService.instance.getLastRunScore();
+    if (!mounted) return;
+    setState(() {
+      _callsign = handle;
+      _best = best;
+      _lastRun = lastRun;
+    });
+  }
+
+  static String _format(int value) {
+    final String digits = value.toString();
+    final StringBuffer grouped = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      grouped.write(digits[i]);
+      final int remaining = digits.length - i - 1;
+      if (remaining > 0 && remaining % 3 == 0) grouped.write(',');
+    }
+    return grouped.toString();
+  }
+
+  Widget _buildStat({
+    required String label,
+    required String value,
+    required Color valueColor,
+    String? badge,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white38,
+            fontSize: 8.5,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+          ),
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: valueColor,
+                fontSize: 11.0,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.4,
+                fontFeatures: const [ui.FontFeature.tabularFigures()],
+              ),
+            ),
+            if (badge != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 4.0),
+                child: Text(
+                  badge,
+                  style: const TextStyle(
+                    color: SplitPalette.godModeGold,
+                    fontSize: 8.0,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDivider() =>
+      Container(width: 1.0, height: 22.0, color: Colors.white12);
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasRuns = _best > 0;
+    final bool isFreshRecord =
+        hasRuns && _lastRun != null && _lastRun == _best;
+
+    return Container(
+      height: 40.0,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(10.0),
+        border: Border.all(color: Colors.white12, width: 1.0),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildStat(
+            label: 'PILOT',
+            value: _callsign,
+            valueColor: Colors.white70,
+          ),
+          _buildDivider(),
+          _buildStat(
+            label: 'BEST',
+            value: hasRuns ? _format(_best) : '—',
+            valueColor: hasRuns ? SplitPalette.godModeGold : Colors.white24,
+          ),
+          _buildDivider(),
+          _buildStat(
+            label: 'LAST',
+            value: _lastRun != null ? _format(_lastRun!) : '—',
+            valueColor: _lastRun != null ? Colors.white70 : Colors.white24,
+            badge: isFreshRecord ? 'NEW' : null,
+          ),
+        ],
+      ),
+    );
+  }
 }

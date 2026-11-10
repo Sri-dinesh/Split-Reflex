@@ -1,7 +1,7 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 
 /// In-memory procedural audio synthesizer producing 16-bit PCM WAV byte buffers.
 /// Requires 0 external audio files (.mp3, .wav, etc.).
@@ -10,6 +10,12 @@ class ProceduralAudioSynth {
   ProceduralAudioSynth._internal();
 
   static const int sampleRate = 44100;
+
+  /// Notified whenever [soundEnabled] changes, so menu quick-mute and the
+  /// settings-sheet switch can share one live source of truth.
+  static final ValueNotifier<bool> soundEnabledState = ValueNotifier<bool>(
+    true,
+  );
 
   late final Uint8List tapWav;
   late final Uint8List nearMissWav;
@@ -26,7 +32,13 @@ class ProceduralAudioSynth {
   AudioPlayer? _deathPlayer;
   bool _playerToggle = false;
   bool _buffersReady = false;
-  bool soundEnabled = true;
+  bool _soundEnabled = true;
+
+  bool get soundEnabled => _soundEnabled;
+  set soundEnabled(bool value) {
+    _soundEnabled = value;
+    soundEnabledState.value = value;
+  }
 
   Future<void> init() async {
     if (!_buffersReady) {

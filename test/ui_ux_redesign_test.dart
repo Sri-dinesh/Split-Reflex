@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:split_brain/core/services/haptic_choreographer.dart';
 import 'package:split_brain/core/services/leaderboard_service.dart';
+import 'package:split_brain/core/services/preferences_service.dart';
 import 'package:split_brain/core/services/procedural_audio_synth.dart';
 import 'package:split_brain/engine/game_controller.dart';
 import 'package:split_brain/ui/overlays/app_settings_sheet.dart';
@@ -162,6 +163,122 @@ void main() {
         // Tap Start Run
         await tester.tap(find.text('Start Run'));
         expect(controller.state, GamePlayState.countdown);
+      },
+    );
+
+    testWidgets(
+      'Pilot stat ribbon shows callsign, best, last run and a fresh-record badge',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        final LeaderboardService service = LeaderboardService.instance;
+        await service.savePlayerHandle('ACE');
+
+        // First run sets a record; second run does not beat it.
+        Future<ScoreEntry> entry(int score) => Future.value(
+          ScoreEntry(
+            id: 'run-$score',
+            playerHandle: 'ACE',
+            score: score,
+            survivalMs: 10000,
+            batteryPct: 80,
+            wasOverdrive: false,
+            failedHemisphere: 'LEFT',
+            createdAt: DateTime.now(),
+          ),
+        );
+        await service.recordScore(await entry(7340));
+        await service.recordScore(await entry(5000));
+
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final controller = GameController();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: DualThumbStartOverlay(
+                controller: controller,
+                onOpenSettings: () {},
+                onOpenLeaderboard: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('ACE'), findsOneWidget);
+        expect(find.text('BEST'), findsOneWidget);
+        expect(find.text('7,340'), findsOneWidget);
+        expect(find.text('LAST'), findsOneWidget);
+        expect(find.text('5,000'), findsOneWidget);
+        // Last run did not match the best → no fresh-record badge.
+        expect(find.text('NEW'), findsNothing);
+
+        // A new record run refreshes the ribbon and gold-lights the badge.
+        await service.clearLocalScores();
+        controller.toggleSessionMode();
+        await tester.pumpAndSettle();
+        expect(find.text('—'), findsNWidgets(2));
+
+        await service.recordScore(await entry(9000));
+        controller.toggleSessionMode();
+        await tester.pumpAndSettle();
+        // Best and last run now show the same fresh record: gold BEST value
+        // beside the white LAST value, plus the NEW badge.
+        expect(
+          find.text('9,000'),
+          findsNWidgets(2),
+        );
+        expect(find.text('NEW'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Quick mute button toggles and persists sound with live icon feedback',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        await PreferencesService.instance.load();
+        ProceduralAudioSynth.instance.soundEnabled = true;
+
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: DualThumbStartOverlay(
+                controller: GameController(),
+                onOpenSettings: () {},
+                onOpenLeaderboard: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
+
+        // One tap silences the engine and persists the choice.
+        await tester.tap(find.byIcon(Icons.volume_up_rounded));
+        await tester.pumpAndSettle();
+        expect(ProceduralAudioSynth.instance.soundEnabled, isFalse);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getBool('pref_sound_enabled'), isFalse);
+        expect(find.byIcon(Icons.volume_off_rounded), findsOneWidget);
+
+        // Tapping again unmutes; the settings switch shares the same state.
+        await tester.tap(find.byIcon(Icons.volume_off_rounded));
+        await tester.pumpAndSettle();
+        expect(ProceduralAudioSynth.instance.soundEnabled, isTrue);
+        expect(
+          (await SharedPreferences.getInstance()).getBool(
+            'pref_sound_enabled',
+          ),
+          isTrue,
+        );
+        expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
       },
     );
 
